@@ -1,0 +1,5 @@
+opencv-python~=4.10.0.84
+numpy~=2.1.2
+moviepy~=1.0.3
+pillow~=10.4.0
+rich~=13.9.2
