@@ -266,15 +266,20 @@ def create_slideshow(args: argparse.Namespace):
             progress.update(overall_task, description="[blue]Applying transitions")
             final_clips = []
             for i, clip in enumerate(clips):
-                if i == 0 and args.title:
-                    progress.update(overall_task, description="[blue]Applying transitions: Title slide")
-                    # Create static title slide for 5 seconds
-                    static_title = create_title_slide(args.title, args.slideshow_width, args.slideshow_height, 5,
-                                                      args.font)
-                    final_clips.append(static_title)
-                    # Add black clip
-                    black_clip = ColorClip(size=(args.slideshow_width, args.slideshow_height), color=(0, 0, 0))
-                    final_clips.append(black_clip.with_duration(args.transition_duration))
+                if i == 0:
+                    progress.update(overall_task, description="[blue]Applying transitions: First image")
+                    if args.title:
+                        # Create static title slide for 5 seconds
+                        static_title = create_title_slide(args.title, args.slideshow_width, args.slideshow_height, 5,
+                                                          args.font)
+                        final_clips.append(static_title)
+                        # Add black clip
+                        black_clip = ColorClip(size=(args.slideshow_width, args.slideshow_height), color=(0, 0, 0))
+                        final_clips.append(black_clip.with_duration(args.transition_duration))
+                    else:
+                        # If no title, fade in the first image from black
+                        black_clip = ColorClip(size=(args.slideshow_width, args.slideshow_height), color=(0, 0, 0))
+                        final_clips.append(black_clip.with_duration(args.transition_duration))
                     # Add first image with fade-in
                     final_clips.append(clip.fadein(args.transition_duration))
                 elif i == len(clips) - 1:
