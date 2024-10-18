@@ -269,19 +269,26 @@ def create_slideshow(args: argparse.Namespace):
                 if i == 0:
                     progress.update(overall_task, description="[blue]Applying transitions: First image")
                     if args.title:
-                        # Create static title slide for 5 seconds
-                        static_title = create_title_slide(args.title, args.slideshow_width, args.slideshow_height, 5,
-                                                          args.font)
-                        final_clips.append(static_title)
-                        # Add black clip
+                        # Black screen for 1 second
                         black_clip = ColorClip(size=(args.slideshow_width, args.slideshow_height), color=(0, 0, 0))
-                        final_clips.append(black_clip.with_duration(args.transition_duration))
+                        final_clips.append(black_clip.with_duration(1))
+                        
+                        # Title slide with fade in and fade out
+                        title_slide = create_title_slide(args.title, args.slideshow_width, args.slideshow_height, 
+                                                         args.image_duration + 2 * args.transition_duration, args.font)
+                        title_slide = title_slide.fadein(args.transition_duration).fadeout(args.transition_duration)
+                        final_clips.append(title_slide)
+                        
+                        # Black screen for 1 second
+                        final_clips.append(black_clip.with_duration(1))
+                        
+                        # First image with fade-in
+                        final_clips.append(clip.fadein(args.transition_duration))
                     else:
                         # If no title, fade in the first image from black
                         black_clip = ColorClip(size=(args.slideshow_width, args.slideshow_height), color=(0, 0, 0))
                         final_clips.append(black_clip.with_duration(args.transition_duration))
-                    # Add first image with fade-in
-                    final_clips.append(clip.fadein(args.transition_duration))
+                        final_clips.append(clip.fadein(args.transition_duration))
                 elif i == len(clips) - 1:
                     progress.update(overall_task,
                                     description=f"[blue]Applying transitions: Last image ({image_files[i].name})")
