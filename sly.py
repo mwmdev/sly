@@ -4,19 +4,31 @@ from pathlib import Path
 from typing import List, Tuple
 import cv2
 import numpy as np
-from moviepy.editor import concatenate_videoclips, ImageClip, CompositeVideoClip
+from moviepy.editor import concatenate_videoclips, ImageClip, CompositeVideoClip, AudioFileClip, ColorClip
 import traceback
 from PIL import Image, ExifTags, ImageFont, ImageDraw
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskID
+from rich.progress import Progress, SpinnerColumn, TextColumn, Spinner, BarColumn, TimeElapsedColumn
+from rich.live import Live
+import re
+import os
+import multiprocessing
+import time
 
 import logging
-logging.basicConfig(level=logging.INFO)
+from venv import logger
+
+logging.basicConfig(level=logging.ERROR)  # Only show error messages
 
 console = Console()
 
-
 def parse_arguments() -> argparse.Namespace:
+    """
+    Parse command line arguments for the slideshow creation script.
+
+    Returns:
+        argparse.Namespace: An object containing all the parsed arguments.
+    """
     parser = argparse.ArgumentParser(description="Create a slideshow from a folder of images")
     parser.add_argument("--path", "-p", type=str, default=".", help="Path to the images directory")
     parser.add_argument("--image-duration", "-id", type=float, default=5, help="Duration of each image in seconds")
@@ -24,19 +36,27 @@ def parse_arguments() -> argparse.Namespace:
                         help="Order of images")
     parser.add_argument("--transition-duration", "-td", type=float, default=2,
                         help="Duration of transition effect in seconds")
-    parser.add_argument("--transition", "-t", type=str, default="fade", help="Transition effect name")
     parser.add_argument("--slideshow-width", "-sw", type=int, default=1920, help="Width of the slideshow in pixels")
     parser.add_argument("--slideshow-height", "-sh", type=int, default=1080, help="Height of the slideshow in pixels")
     parser.add_argument("--output", "-o", type=str, default="slideshow.mp4", help="Output file name")
     parser.add_argument("--title", type=str, default="", help="Title of the slideshow")
     parser.add_argument("--font", type=str, default=None, help="Path to a .ttf font file for the title")
     parser.add_argument("--soundtrack", "-st", type=str, default="", help="Audio file for soundtrack")
-    parser.add_argument("--gpu", action="store_true", help="Use GPU acceleration")
+    parser.add_argument("--fps", type=float, default=24.0, help="Frames per second for the output video")
     return parser.parse_args()
 
-
 def get_image_files(path: str, order: str) -> List[Path]:
-    image_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp"}
+    """
+    Get a list of image files from the specified path, ordered as requested.
+
+    Args:
+        path (str): The directory path containing the images.
+        order (str): The order to sort the images ("name", "date", or "random").
+
+    Returns:
+        List[Path]: A list of Path objects representing the image files.
+    """
+    image_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".jpg_"}
     image_files = [f for f in Path(path).iterdir() if f.suffix.lower() in image_extensions]
 
     if order == "name":
@@ -48,8 +68,16 @@ def get_image_files(path: str, order: str) -> List[Path]:
 
     return image_files
 
-
 def rotate_image(image: Image.Image) -> Image.Image:
+    """
+    Rotate the image based on its EXIF orientation data.
+
+    Args:
+        image (Image.Image): The input image.
+
+    Returns:
+        Image.Image: The rotated image.
+    """
     try:
         for orientation in ExifTags.TAGS.keys():
             if ExifTags.TAGS[orientation] == 'Orientation':
@@ -66,8 +94,18 @@ def rotate_image(image: Image.Image) -> Image.Image:
         pass
     return image
 
-
 def resize_and_crop(image: Image.Image, target_width: int, target_height: int) -> Image.Image:
+    """
+    Resize and crop the image to fit the target dimensions while maintaining aspect ratio.
+
+    Args:
+        image (Image.Image): The input image.
+        target_width (int): The desired width of the output image.
+        target_height (int): The desired height of the output image.
+
+    Returns:
+        Image.Image: The resized and cropped image.
+    """
     img_ratio = image.width / image.height
     target_ratio = target_width / target_height
 
@@ -84,29 +122,20 @@ def resize_and_crop(image: Image.Image, target_width: int, target_height: int) -
 
     return image.resize((target_width, target_height), Image.LANCZOS)
 
-
-def enhance_colors(image: Image.Image) -> Image.Image:
-    # Convert to LAB color space
-    lab = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2LAB)
-
-    # Split the LAB image into L, A, and B channels
-    l, a, b = cv2.split(lab)
-
-    # Apply CLAHE to L channel
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    cl = clahe.apply(l)
-
-    # Merge the CLAHE enhanced L-channel back with A and B channels
-    limg = cv2.merge((cl, a, b))
-
-    # Convert back to RGB color space
-    enhanced = cv2.cvtColor(limg, cv2.COLOR_LAB2RGB)
-
-    return Image.fromarray(enhanced)
-
-
 def create_title_slide(title: str, width: int, height: int, duration: float, font_path: str = None) -> ImageClip:
-    console.print("[cyan]Starting title slide creation...[/cyan]")
+    """
+    Create a title slide for the slideshow.
+
+    Args:
+        title (str): The title text to display on the slide.
+        width (int): The width of the slide.
+        height (int): The height of the slide.
+        duration (float): The duration of the title slide in seconds.
+        font_path (str, optional): Path to a custom font file. Defaults to None.
+
+    Returns:
+        ImageClip: A moviepy ImageClip object representing the title slide.
+    """
     try:
         # Create a black background
         image = Image.new('RGB', (width, height), color='black')
@@ -117,12 +146,11 @@ def create_title_slide(title: str, width: int, height: int, duration: float, fon
         if font_path:
             try:
                 font = ImageFont.truetype(font_path, font_size)
-                console.print(f"Using font from: {font_path}")
             except IOError:
-                console.print(f"[yellow]Error loading font from {font_path}. Using default font.[/yellow]")
+                console.print(f"[red]Error loading font from {font_path}. Using default font.[/red]")
                 font = ImageFont.load_default()
         else:
-            console.print("[yellow]No font specified. Using default font.[/yellow]")
+            console.print("[blue]No font specified. Using default font.[/blue]")
             font = ImageFont.load_default()
 
         # Get text size
@@ -136,156 +164,196 @@ def create_title_slide(title: str, width: int, height: int, duration: float, fon
         # Draw text
         draw.text(position, title, font=font, fill='white')
 
-        console.print("Title slide image created successfully.")
-
         # Convert to ImageClip
         image_array = np.array(image)
-        clip = ImageClip(image_array).set_duration(duration)
+        clip = ImageClip(image_array).with_duration(duration)  # Changed from set_duration to with_duration
 
-        # Add a fade-in effect
+        # Add only a fade-in effect
         clip = clip.fadein(duration/2)
 
         return clip
     except Exception as e:
-        console.print(f"[bold red]Error in create_title_slide: {str(e)}[/bold red]")
-        console.print(f"Traceback: {traceback.format_exc()}")
+        console.print(f"[red]Error in create_title_slide: {str(e)}[/red]")
+        console.print(f"[red]Traceback: {traceback.format_exc()}[/red]")
         raise
 
-def process_images(args: argparse.Namespace, progress: Progress, task: TaskID) -> List[Tuple[np.ndarray, float]]:
-    image_files = get_image_files(args.path, args.image_order)
-    processed_images = []
+class CustomProgressBar:
+    """
+    A custom progress bar class for tracking and displaying the progress of video rendering.
+    """
+    def __init__(self, rich_progress, rich_task):
+        self.rich_progress = rich_progress
+        self.rich_task = rich_task
+        self.t0 = time.time()
+        self.duration = None
 
-    for image_file in image_files:
-        with Image.open(image_file) as img:
-            img = rotate_image(img)
-            img = resize_and_crop(img, args.slideshow_width, args.slideshow_height)
-            img = enhance_colors(img)
-            processed_images.append((np.array(img), args.image_duration))
-        progress.update(task, advance=1)
+    def __call__(self, t):
+        if self.duration is None:
+            self.duration = t
+        progress_percentage = t / self.duration if self.duration > 0 else 0
+        self.rich_progress.update(
+            self.rich_task,
+            completed=80 + (progress_percentage * 20),
+            description=f"[blue]Writing video: {t:.1f}s / {self.duration:.1f}s"
+        )
+        return self.make_animation(t / self.duration)
 
-    return processed_images
+    def make_animation(self, progress):
+        return int(100 * progress)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
 
 def create_slideshow(args: argparse.Namespace):
-    clips = []  # Initialize clips list
+    """
+    Create a slideshow based on the provided arguments.
+
+    This function orchestrates the entire process of creating a slideshow,
+    including processing images, creating transitions, adding a title slide
+    and soundtrack (if specified), and rendering the final video.
+
+    Args:
+        args (argparse.Namespace): The parsed command-line arguments containing
+                                   all the parameters for slideshow creation.
+    """
+    start_time = time.time()
+
     with Progress(
             SpinnerColumn(),
+            BarColumn(bar_width=None),
             TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
             TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            TimeElapsedColumn(),
+            console=console,
+            expand=True
     ) as progress:
+        overall_task = progress.add_task("[blue]Creating slideshow", total=100)
+
         try:
             # Create title slide if specified
-            title_slide = None
             if args.title:
-                console.print("[cyan]Creating title slide...[/cyan]")
+                progress.update(overall_task, description="[blue]Creating title slide")
                 try:
-                    title_slide = create_title_slide(args.title, args.slideshow_width, args.slideshow_height, args.image_duration, args.font)
-                    console.print("[green]Title slide created successfully[/green]")
+                    title_slide = create_title_slide(args.title, args.slideshow_width, args.slideshow_height,
+                                                     args.image_duration, args.font)
                 except Exception as e:
-                    console.print(f"[bold red]Error creating title slide: {str(e)}[/bold red]")
-                    console.print(f"Traceback: {traceback.format_exc()}")
-                    console.print("[yellow]Continuing without title slide...[/yellow]")
+                    console.print(f"[red]Error creating title slide: {str(e)}[/red]")
+                progress.update(overall_task, advance=10)
 
             # Process images
-            task_process = progress.add_task("[cyan]Processing images...",
-                                             total=len(get_image_files(args.path, args.image_order)))
-            processed_images = process_images(args, progress, task_process)
+            progress.update(overall_task, description="[blue]Processing images")
+            image_files = get_image_files(args.path, args.image_order)
+            processed_images = []
+            for i, image_file in enumerate(image_files):
+                progress.update(overall_task, description=f"[blue]Processing image: {image_file.name}")
+                with Image.open(image_file) as img:
+                    img = rotate_image(img)
+                    img = resize_and_crop(img, args.slideshow_width, args.slideshow_height)
+                    processed_images.append((np.array(img), args.image_duration))
+                progress.update(overall_task, advance=20 / len(image_files))
 
             # Create video clips
-            task_create = progress.add_task("[green]Creating video clips...", total=len(processed_images))
+            progress.update(overall_task, description="[blue]Creating video clips")
+            clips = []
             for i, (img, duration) in enumerate(processed_images):
-                console.print(f"Creating clip {i + 1} of {len(processed_images)}")
-                clip = ImageClip(img).set_duration(args.image_duration)
-                clips.append(clip)
-                progress.update(task_create, advance=1)
+                clips.append(ImageClip(img).with_duration(duration))  # Changed from set_duration to with_duration
+                progress.update(overall_task, advance=10 / len(processed_images))
 
             # Apply transitions
-            console.print("[yellow]Applying transitions...[/yellow]")
+            progress.update(overall_task, description="[blue]Applying transitions")
             final_clips = []
-
-            # Handle title slide if it exists
-            if title_slide:
-                if clips:  # If there are image clips
-                    transition = CompositeVideoClip([
-                        title_slide,
-                        clips[0].set_start(args.image_duration - args.transition_duration)
-                        .crossfadein(args.transition_duration)
-                    ]).set_duration(args.image_duration)
-                    final_clips.append(transition)
-                else:  # If title slide is the only clip
-                    final_clips.append(title_slide)
-
-            # Handle image clips
             for i, clip in enumerate(clips):
-                if i == 0 and title_slide:
-                    # First image after title slide: already handled in title slide transition
-                    final_clips.append(clip.set_duration(args.image_duration - args.transition_duration))
-                elif i == len(clips) - 1:  # Last image
-                    if i > 0:  # If it's not the only image
-                        # Add transition from previous clip to this one
+                if i == 0 and args.title:
+                    progress.update(overall_task, description="[blue]Applying transitions: Title slide")
+                    # Create static title slide for 5 seconds
+                    static_title = create_title_slide(args.title, args.slideshow_width, args.slideshow_height, 5,
+                                                      args.font)
+                    final_clips.append(static_title)
+                    # Add black clip
+                    black_clip = ColorClip(size=(args.slideshow_width, args.slideshow_height), color=(0, 0, 0))
+                    final_clips.append(black_clip.with_duration(args.transition_duration))
+                    # Add first image with fade-in
+                    final_clips.append(clip.fadein(args.transition_duration))
+                elif i == len(clips) - 1:
+                    progress.update(overall_task,
+                                    description=f"[blue]Applying transitions: Last image ({image_files[i].name})")
+                    if i > 0:
                         transition = CompositeVideoClip([
-                            clips[i-1],
-                            clip.set_start(args.image_duration - args.transition_duration)
+                            clips[i - 1],
+                            clip.with_start(args.image_duration - args.transition_duration)
                             .crossfadein(args.transition_duration)
-                        ]).set_duration(args.image_duration)
+                        ]).with_duration(args.image_duration)
                         final_clips.append(transition)
-
-                    # Add the last clip with full duration and fade out
-                    final_clips.append(clip.set_duration(args.image_duration).fadeout(args.transition_duration))
-                else:  # Middle images
-                    # Add transition from previous clip to this one
+                    final_clips.append(clip.with_duration(args.image_duration).fadeout(args.transition_duration))
+                else:
+                    progress.update(overall_task, description=f"[blue]Applying transitions: {image_files[i].name}")
                     transition = CompositeVideoClip([
-                        clips[i-1],
-                        clip.set_start(args.image_duration - args.transition_duration)
+                        clips[i - 1],
+                        clip.with_start(args.image_duration - args.transition_duration)
                         .crossfadein(args.transition_duration)
-                    ]).set_duration(args.image_duration)
+                    ]).with_duration(args.image_duration)
                     final_clips.append(transition)
-
-                    # Add the clip with duration minus transition time
-                    final_clips.append(clip.set_duration(args.image_duration - args.transition_duration))
+                    final_clips.append(clip.with_duration(args.image_duration - args.transition_duration))
+                progress.update(overall_task, advance=20 / len(clips))
 
             # Concatenate clips
-            console.print("Concatenating clips...")
-            task_concat = progress.add_task("[yellow]Concatenating clips...")
-            try:
-                final_clip = concatenate_videoclips(final_clips)
-                console.print("Clips concatenated successfully")
-                console.print(f"Final clip duration: {final_clip.duration} seconds")
-            except Exception as e:
-                console.print(f"[red]Error during concatenation process: {str(e)}[/red]")
-                console.print(f"Traceback: {traceback.format_exc()}")
-                raise
-            progress.update(task_concat, completed=100)
+            progress.update(overall_task, description="[blue]Concatenating clips")
+            final_clip = concatenate_videoclips(final_clips)
+            progress.update(overall_task, advance=10)
+
+            # Add soundtrack if specified
+            if args.soundtrack:
+                progress.update(overall_task, description="[blue]Adding soundtrack")
+                try:
+                    audio = AudioFileClip(args.soundtrack)
+                    if audio.duration < final_clip.duration:
+                        audio = audio.audio_loop(duration=final_clip.duration)
+                    else:
+                        audio = audio.subclip(0, final_clip.duration)
+                    final_clip = final_clip.set_audio(audio)
+                except Exception as e:
+                    console.print(f"[red]Error adding soundtrack: {str(e)}[/red]")
+                progress.update(overall_task, advance=10)
+
+            # Ensure we have a valid fps value
+            fps = args.fps if args.fps is not None else 24.0
 
             # Write final output file
-            console.print("Writing final output file...")
-            task_write = progress.add_task("[red]Writing final output file...")
-            try:
-                final_clip.write_videofile(
-                    args.output,
-                    fps=24,
-                    codec="libx264",
-                    audio_codec="aac",
-                    threads=4,
-                    preset="medium",
-                    ffmpeg_params=["-crf", "18"],
-                )
-                console.print("Final output file written successfully")
-            except Exception as e:
-                console.print(f"[red]Error writing final output file: {str(e)}[/red]")
-                console.print(f"Traceback: {traceback.format_exc()}")
-                raise
-            progress.update(task_write, completed=100)
+            progress.update(overall_task, description="[blue]Rendering video")
+            custom_progress_bar = CustomProgressBar(progress, overall_task)
+
+            # Determine the number of CPU cores
+            num_cores = multiprocessing.cpu_count()
+
+            # Use 75% of available cores, but at least 1
+            num_threads = max(1, int(num_cores * 0.75))
+
+            final_clip.write_videofile(
+                args.output,
+                fps=fps,  
+                codec="libx264",
+                audio_codec="aac",
+                threads=num_threads,
+                preset="medium",
+                ffmpeg_params=["-crf", "18"],
+            )
+            progress.update(overall_task, completed=100)  # Ensure we reach 100%
 
         except Exception as e:
-            console.print(f"[bold red]An error occurred: {str(e)}[/bold red]")
-            console.print(f"Traceback: {traceback.format_exc()}")
+            console.print(f"[red]An error occurred: {str(e)}[/red]")
             raise
 
-    console.print("[bold green]Slideshow creation process completed.[/bold green]")
+    # Final output
+    duration = time.time() - start_time
+    console.print(
+        f"[green]{args.output} rendered successfully!\n"
+        f"Duration: {final_clip.duration:.2f} seconds\n"
+        )
 
 if __name__ == "__main__":
+    start_time = time.time()
     args = parse_arguments()
-    console.print("[bold green]Starting slideshow creation...[/bold green]")
     create_slideshow(args)
