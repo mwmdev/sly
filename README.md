@@ -24,7 +24,7 @@
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/sly.git
+   git clone https://github.com/mwmdev/sly.git
    cd sly
    ```
 
@@ -106,4 +106,4 @@ If you encounter any problems or have any suggestions, please open an issue on t
 
 ---
 
-Happy slideshow creating with sly! 📸🎞️
+Happy slideshow creating with sly! 📸 🎞️
