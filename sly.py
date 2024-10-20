@@ -41,6 +41,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--output", "-o", type=str, default="slideshow.mp4", help="Output file name")
     parser.add_argument("--title", type=str, default="", help="Title of the slideshow")
     parser.add_argument("--font", type=str, default=None, help="Path to a .ttf font file for the title")
+    parser.add_argument("--font-size", type=int, default=None, help="Font size for the title (default is auto-calculated)")
     parser.add_argument("--soundtrack", "-st", type=str, default="", help="Audio file for soundtrack")
     parser.add_argument("--fps", type=float, default=24.0, help="Frames per second for the output video")
     return parser.parse_args()
@@ -122,7 +123,7 @@ def resize_and_crop(image: Image.Image, target_width: int, target_height: int) -
 
     return image.resize((target_width, target_height), Image.LANCZOS)
 
-def create_title_slide(title: str, width: int, height: int, duration: float, font_path: str = None) -> ImageClip:
+def create_title_slide(title: str, width: int, height: int, duration: float, font_path: str = None, font_size: int = None) -> ImageClip:
     """
     Create a title slide for the slideshow.
 
@@ -132,6 +133,7 @@ def create_title_slide(title: str, width: int, height: int, duration: float, fon
         height (int): The height of the slide.
         duration (float): The duration of the title slide in seconds.
         font_path (str, optional): Path to a custom font file. Defaults to None.
+        font_size (int, optional): Font size for the title. Defaults to None (auto-calculated).
 
     Returns:
         ImageClip: A moviepy ImageClip object representing the title slide.
@@ -142,7 +144,8 @@ def create_title_slide(title: str, width: int, height: int, duration: float, fon
         draw = ImageDraw.Draw(image)
 
         # Load font
-        font_size = min(width, height) // 10
+        if font_size is None:
+            font_size = min(width, height) // 10
         if font_path:
             try:
                 font = ImageFont.truetype(font_path, font_size)
@@ -245,7 +248,7 @@ def create_slideshow(args: argparse.Namespace):
                 progress.update(overall_task, description="[blue]Creating title slide")
                 try:
                     title_slide = create_title_slide(args.title, args.slideshow_width, args.slideshow_height,
-                                                     args.image_duration, args.font)
+                                                     args.image_duration, args.font, args.font_size)
                 except Exception as e:
                     console.print(f"[red]Error creating title slide: {str(e)}[/red]")
                 progress.update(overall_task, advance=10)
@@ -282,7 +285,7 @@ def create_slideshow(args: argparse.Namespace):
                         
                         # Title slide with fade in and fade out
                         title_slide = create_title_slide(args.title, args.slideshow_width, args.slideshow_height, 
-                                                         args.image_duration + 2 * args.transition_duration, args.font)
+                                                         args.image_duration + 2 * args.transition_duration, args.font, args.font_size)
                         title_slide = title_slide.fadein(args.transition_duration).fadeout(args.transition_duration)
                         final_clips.append(title_slide)
                         
@@ -376,4 +379,3 @@ if __name__ == "__main__":
     start_time = time.time()
     args = parse_arguments()
     create_slideshow(args)
-
