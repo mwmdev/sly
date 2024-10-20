@@ -269,7 +269,7 @@ def create_slideshow(args: argparse.Namespace):
                 if i == 0:
                     progress.update(overall_task, description="[blue]Applying transitions: First image")
                     if args.title:
-                        # Black screen for 1 second
+                        # Black screen for 3 seconds
                         black_clip = ColorClip(size=(args.slideshow_width, args.slideshow_height), color=(0, 0, 0))
                         final_clips.append(black_clip.with_duration(1))
                         
@@ -279,7 +279,7 @@ def create_slideshow(args: argparse.Namespace):
                         title_slide = title_slide.fadein(args.transition_duration).fadeout(args.transition_duration)
                         final_clips.append(title_slide)
                         
-                        # Black screen for 1 second
+                        # Black screen for 3 seconds
                         final_clips.append(black_clip.with_duration(1))
                         
                         # First image with fade-in
