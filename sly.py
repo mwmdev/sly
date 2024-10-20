@@ -221,6 +221,13 @@ def create_slideshow(args: argparse.Namespace):
     """
     start_time = time.time()
 
+    # Check if the output file already exists
+    if os.path.exists(args.output):
+        overwrite = input(f"The file '{args.output}' already exists. Do you want to overwrite it? [Y/n]: ").lower()
+        if overwrite and overwrite != 'y':
+            console.print("[yellow]Operation cancelled. Exiting...[/yellow]")
+            return
+
     with Progress(
             SpinnerColumn(),
             BarColumn(bar_width=None),
