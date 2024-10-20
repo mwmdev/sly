@@ -56,6 +56,7 @@ python sly.py --path ./path/to/images --output ./path/to/output.mp4
 - `--output`, `-o`: The name of the output file (default: slideshow.mp4)
 - `--title`: The title of the slideshow (optional)
 - `--font`: Path to a .ttf font file for the title (optional)
+- `--font-size`: The size of the font for the title (optional)
 - `--soundtrack`, `-st`: The path to the audio file for the soundtrack (optional)
 - `--fps`: The number of frames per second for the output video (default: 24.0)
 
@@ -73,7 +74,7 @@ python sly.py --path ./path/to/images --output ./path/to/output.mp4
 
 3. Create a slideshow with a title and a custom font:
    ```bash
-   python sly.py --path /path/to/photos --title "Summer Vacation 2023" --font /path/to/font.ttf
+   python sly.py --path /path/to/photos --title "Summer Vacation 2023" --font /path/to/font.ttf --font-size 48
    ```
 
 4. Create a high-resolution slideshow with custom FPS:
