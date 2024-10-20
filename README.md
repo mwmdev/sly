@@ -5,9 +5,9 @@
 ## Features
 
 - Create slideshows from a folder of images
-- Customize image duration and transition effects
+- Customize image and transition duration
 - Add background music to your slideshow
-- Include a title slide with custom fonts
+- Include a title slide with custom font
 - Support for various image ordering options (by name, date, or random)
 - Adjustable output resolution and frame rate
 - Progress bar for real-time rendering updates
