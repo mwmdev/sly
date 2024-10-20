@@ -56,7 +56,7 @@ def get_image_files(path: str, order: str) -> List[Path]:
     Returns:
         List[Path]: A list of Path objects representing the image files.
     """
-    image_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".jpg_"}
+    image_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".jpg_", ".tiff", ".tif", ".webp"}
     image_files = [f for f in Path(path).iterdir() if f.suffix.lower() in image_extensions]
 
     if order == "name":
@@ -376,3 +376,4 @@ if __name__ == "__main__":
     start_time = time.time()
     args = parse_arguments()
     create_slideshow(args)
+
