@@ -62,11 +62,11 @@ python sly.py --path ./path/to/images --output ./path/to/output.mp4
 - `--slideshow-width`, `-sw`: The width of the slideshow in pixels
 - `--slideshow-height`, `-sh`: The height of the slideshow in pixels
 - `--output`, `-o`: The name of the output file
-- `--title`: The title of the slideshow 
-- `--font`: Path to a .ttf font file for the title    
-- `--font-size`: The size of the font for the title 
+- `--title`, `-t`: The title of the slideshow 
+- `--font`, `-f`: Path to a .ttf font file for the title    
+- `--font-size`, `-fs`: The size of the font for the title 
 - `--soundtrack`, `-st`: The path to the audio file for the soundtrack 
-- `--fps`: The number of frames per second for the output video (default: 24.0)
+- `--fps`, `-fps`: The number of frames per second for the output video (default: 24.0)
 - `--config`, `-c`: Path to a custom config file 
 - `--verbose`, `-v`: Print more information
 
