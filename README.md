@@ -60,6 +60,7 @@ python sly.py --path ./path/to/images --output ./path/to/output.mp4
 - `--soundtrack`, `-st`: The path to the audio file for the soundtrack 
 - `--fps`: The number of frames per second for the output video (default: 24.0)
 - `--config`, `-c`: Path to a custom config file 
+- `--verbose`, `-v`: Print more information
 
 Default values are loaded from `config.toml` file in the current directory or in `~/.config/sly/config.toml` if the file is not found in the current directory.
 

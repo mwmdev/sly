@@ -61,6 +61,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--font-size", "-fs", type=int, default=None, help="Font size for the title")
     parser.add_argument("--soundtrack", "-st", type=str, default=None, help="Audio file for soundtrack")
     parser.add_argument("--fps", "-fps", type=float, default=None, help="Frames per second for the output video")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Print more information")
 
     args = parser.parse_args()
 
@@ -71,7 +72,6 @@ def parse_arguments() -> argparse.Namespace:
     
     # Load config file
     config = load_config_file(config_path)
-    console.print(f"Loaded: {config_path}")
 
     # Override config values with command line arguments if provided
     for key, value in vars(args).items():
@@ -79,9 +79,11 @@ def parse_arguments() -> argparse.Namespace:
             setattr(args, key, config[key])
 
     # Print final argument values
-    for key, value in vars(args).items():
-        if value:
-            console.print(f"- {key}: [blue]{value}[/blue]")
+    if args.verbose:
+        console.print(f"Loaded: {config_path}")
+        for key, value in vars(args).items():
+            if value:
+                console.print(f"- {key}: [blue]{value}[/blue]")
 
     return args
 
