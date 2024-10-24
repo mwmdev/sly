@@ -1,4 +1,4 @@
-# sly: CLI Slideshow Generator
+# sly: a simple cli slideshow generator
 
 `sly` is a lightweight and flexible command-line tool for creating slideshows from your image collections. With support for tansition effect, soundtrack, and title slide, `sly` makes it easy to quickly turn your photos into nice-looking videos.
 
@@ -16,9 +16,10 @@
 
 ### Prerequisites
 
+Make sure you have the following installed:
+
 - Python 3.7+
 - FFmpeg
-
 
 ### Manual Installation
 
@@ -28,14 +29,26 @@
    cd sly
    ```
 
-2. Install the required Python packages:
+2. Create and activate a virtual environment:
+   - **Linux/macOS**:
+     ```bash
+     python3 -m venv venv
+     source venv/bin/activate
+     ```
+   - **Windows**:
+     ```bash
+     python -m venv venv
+     .\venv\Scripts\activate
+     ```
+
+3. Install the required Python packages:
    ```bash
    pip install -r requirements.txt
    ```
 
 ### Using Nix
 
-If you're using NixOS or have Nix package manager installed, you can use the provided `shell.nix` file to set up the environment.
+If you're using _NixOS_ or have the _Nix_ package manager installed, you can use the provided `shell.nix` file to set up the environment.
 
 ## Usage
 
@@ -92,6 +105,14 @@ Default values are loaded from `config.toml` file in the current directory or in
    python sly.py --path /path/to/photos --soundtrack /path/to/soundtrack.mp3
    ```
 
+### Sample output
+
+```bash
+python sly.py -p img -sw 800 -sh 600 -id 3 -td 1 -t "Live Free" -f fonts/HomemadeApple-Regular.ttf -fs 50
+```
+
+![sample output](assets/screenshot.png)
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -105,6 +126,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [MoviePy](https://zulko.github.io/moviepy/) for video editing capabilities
 - [Pillow](https://python-pillow.org/) for image processing
 - [Rich](https://rich.readthedocs.io/) for beautiful terminal output
+- [FFmpeg](https://ffmpeg.org/) for video encoding
 
 ## Support
 
