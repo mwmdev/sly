@@ -1,0 +1,38 @@
+# Configuration file for sly.py
+
+# Path to the images directory
+path = "."
+
+# Duration of each image in seconds
+image_duration = 5.0
+
+# Order of images: "name", "date", or "random"
+image_order = "random"
+
+# Duration of transition effect in seconds
+transition_duration = 1.0
+
+# Width of the slideshow in pixels
+slideshow_width = 1920
+
+# Height of the slideshow in pixels
+slideshow_height = 1080
+
+# Output file name
+output = "slideshow.mp4"
+
+# Title of the slideshow
+title = ""
+
+# Path to a .ttf font file for the title
+font =""
+
+# Font size for the title (default is auto-calculated)
+font_size = ""
+
+# Audio file for soundtrack
+soundtrack = ""
+
+# Frames per second for the output video
+fps = 24.0
+

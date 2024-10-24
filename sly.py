@@ -11,6 +11,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeEl
 import os
 import multiprocessing
 import time
+import toml
 
 import logging
 # from venv import logger
@@ -18,6 +19,26 @@ import logging
 logging.basicConfig(level=logging.ERROR)  # Only show error messages
 
 console = Console()
+
+def load_config_file(config_path: str) -> dict:
+    """
+    Load configuration from a TOML file.
+
+    Args:
+        config_path (str): Path to the config file.
+
+    Returns:
+        dict: Configuration dictionary.
+    """
+    try:
+        with open(config_path, 'r') as file:
+            return toml.load(file)
+    except FileNotFoundError:
+        console.print(f"[yellow]Config file not found at {config_path}. Using default values or command-line arguments.[/yellow]")
+        return {}
+    except Exception as e:
+        console.print(f"[red]Error loading config file: {str(e)}[/red]")
+        return {}
 
 def parse_arguments() -> argparse.Namespace:
     """
@@ -27,21 +48,42 @@ def parse_arguments() -> argparse.Namespace:
         argparse.Namespace: An object containing all the parsed arguments.
     """
     parser = argparse.ArgumentParser(description="Create a slideshow from a folder of images")
-    parser.add_argument("--path", "-p", type=str, default=".", help="Path to the images directory")
-    parser.add_argument("--image-duration", "-id", type=float, default=5, help="Duration of each image in seconds")
-    parser.add_argument("--image-order", "-io", type=str, default="date", choices=["name", "date", "random"],
-                        help="Order of images")
-    parser.add_argument("--transition-duration", "-td", type=float, default=2,
-                        help="Duration of transition effect in seconds")
-    parser.add_argument("--slideshow-width", "-sw", type=int, default=1920, help="Width of the slideshow in pixels")
-    parser.add_argument("--slideshow-height", "-sh", type=int, default=1080, help="Height of the slideshow in pixels")
-    parser.add_argument("--output", "-o", type=str, default="slideshow.mp4", help="Output file name")
-    parser.add_argument("--title", type=str, default="", help="Title of the slideshow")
+    parser.add_argument("--config", type=str, help="Path to a custom config file")
+    parser.add_argument("--path", type=str, default=None, help="Path to the images directory")
+    parser.add_argument("--image_duration", type=float, default=None, help="Duration of each image in seconds")
+    parser.add_argument("--image_order", type=str, default=None, help="Order of images: 'name', 'date', or 'random'")
+    parser.add_argument("--transition_duration", type=float, default=None, help="Duration of transition effect in seconds")
+    parser.add_argument("--slideshow_width", type=int, default=None, help="Width of the slideshow in pixels")
+    parser.add_argument("--slideshow_height", type=int, default=None, help="Height of the slideshow in pixels")
+    parser.add_argument("--output", type=str, default=None, help="Output file name")
+    parser.add_argument("--title", type=str, default=None, help="Title of the slideshow")
     parser.add_argument("--font", type=str, default=None, help="Path to a .ttf font file for the title")
-    parser.add_argument("--font-size", type=int, default=None, help="Font size for the title (default is auto-calculated)")
-    parser.add_argument("--soundtrack", "-st", type=str, default="", help="Audio file for soundtrack")
-    parser.add_argument("--fps", type=float, default=24.0, help="Frames per second for the output video")
-    return parser.parse_args()
+    parser.add_argument("--font_size", type=int, default=None, help="Font size for the title")
+    parser.add_argument("--soundtrack", type=str, default=None, help="Audio file for soundtrack")
+    parser.add_argument("--fps", type=float, default=None, help="Frames per second for the output video")
+
+    args = parser.parse_args()
+
+    # Determine config file path
+    config_path = args.config or "config.toml"
+    if not os.path.exists(config_path):
+        config_path = os.path.expanduser("~/.config/sly/config.toml")
+    
+    # Load config file
+    config = load_config_file(config_path)
+    console.print(f"Loaded: {config_path}")
+
+    # Override config values with command line arguments if provided
+    for key, value in vars(args).items():
+        if value is None and key in config:
+            setattr(args, key, config[key])
+
+    # Print final argument values
+    for key, value in vars(args).items():
+        if value:
+            console.print(f"- {key}: [blue]{value}[/blue]")
+
+    return args
 
 def get_image_files(path: str, order: str) -> List[Path]:
     """
@@ -360,3 +402,4 @@ if __name__ == "__main__":
     start_time = time.time()
     args = parse_arguments()
     create_slideshow(args)
+
