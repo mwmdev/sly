@@ -108,6 +108,8 @@ python sly.py -p img -sw 800 -sh 600 -id 3 -td 1 -t "Live Free" -f fonts/Homemad
 
 ![sample output](assets/screenshot.png)
 
+![slideshow](assets/slideshow.gif)
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
