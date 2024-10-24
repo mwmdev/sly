@@ -2,21 +2,21 @@ import argparse
 import random
 from pathlib import Path
 from typing import List, Tuple
-import cv2
+# import cv2
 import numpy as np
 from moviepy.editor import concatenate_videoclips, ImageClip, CompositeVideoClip, AudioFileClip, ColorClip
 import traceback
 from PIL import Image, ExifTags, ImageFont, ImageDraw
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, Spinner, BarColumn, TimeElapsedColumn
-from rich.live import Live
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
+# from rich.live import Live
 import re
 import os
 import multiprocessing
 import time
 
 import logging
-from venv import logger
+# from venv import logger
 
 logging.basicConfig(level=logging.ERROR)  # Only show error messages
 
