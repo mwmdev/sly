@@ -80,13 +80,15 @@ def rotate_image(image: Image.Image) -> Image.Image:
         for orientation in ExifTags.TAGS.keys():
             if ExifTags.TAGS[orientation] == 'Orientation':
                 break
-        exif = dict(image._getexif().items())
-        if exif[orientation] == 3:
-            image = image.rotate(180, expand=True)
-        elif exif[orientation] == 6:
-            image = image.rotate(270, expand=True)
-        elif exif[orientation] == 8:
-            image = image.rotate(90, expand=True)
+        exif = image._getexif()
+        if exif is not None:
+            exif = dict(exif.items())
+            if exif.get(orientation) == 3:
+                image = image.rotate(180, expand=True)
+            elif exif.get(orientation) == 6:
+                image = image.rotate(270, expand=True)
+            elif exif.get(orientation) == 8:
+                image = image.rotate(90, expand=True)
     except (AttributeError, KeyError, IndexError):
         # No EXIF data or no orientation info
         pass
@@ -376,3 +378,4 @@ if __name__ == "__main__":
     start_time = time.time()
     args = parse_arguments()
     create_slideshow(args)
+
