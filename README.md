@@ -48,17 +48,21 @@ python sly.py --path ./path/to/images --output ./path/to/output.mp4
 ### Options
 
 - `--path`, `-p`: Path to the images directory (default: current directory)
-- `--image-duration`, `-id`: The number of seconds each image will be displayed (default: 5)
-- `--image-order`, `-io`: Order of images (choices: name, date, random; default: date)
-- `--transition-duration`, `-td`: The number of seconds the transition effect will take to complete (default: 2)
-- `--slideshow-width`, `-sw`: The width of the slideshow in pixels (default: 1920)
-- `--slideshow-height`, `-sh`: The height of the slideshow in pixels (default: 1080)
-- `--output`, `-o`: The name of the output file (default: slideshow.mp4)
-- `--title`: The title of the slideshow (optional)
-- `--font`: Path to a .ttf font file for the title (optional)
-- `--font-size`: The size of the font for the title (optional)
-- `--soundtrack`, `-st`: The path to the audio file for the soundtrack (optional)
+- `--image-duration`, `-id`: The number of seconds each image will be displayed
+- `--image-order`, `-io`: Order of images (choices: name, date, random)
+- `--transition-duration`, `-td`: The number of seconds the transition effect will take to complete
+- `--slideshow-width`, `-sw`: The width of the slideshow in pixels
+- `--slideshow-height`, `-sh`: The height of the slideshow in pixels
+- `--output`, `-o`: The name of the output file
+- `--title`: The title of the slideshow 
+- `--font`: Path to a .ttf font file for the title    
+- `--font-size`: The size of the font for the title 
+- `--soundtrack`, `-st`: The path to the audio file for the soundtrack 
 - `--fps`: The number of frames per second for the output video (default: 24.0)
+- `--config`, `-c`: Path to a custom config file 
+
+Default values are loaded from `config.toml` file in the current directory or in `~/.config/sly/config.toml` if the file is not found in the current directory.
+
 
 ### Examples
 
@@ -107,4 +111,4 @@ If you encounter any problems or have any suggestions, please open an issue on t
 
 ---
 
-Happy slideshow creating with sly! 📸 🎞️
+Happy slideshow creating with sly!
