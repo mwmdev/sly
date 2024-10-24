@@ -102,11 +102,17 @@ Default values are loaded from `config.toml` file in the current directory or in
 
 ### Sample output
 
+Here's a sample output from the command below:
+
 ```bash
-python sly.py -p img -sw 800 -sh 600 -id 3 -td 1 -t "Live Free" -f fonts/HomemadeApple-Regular.ttf -fs 50
+python sly.py -p img -sw 400 -sh 300 -id 3 -td 1 -t "Live Free" -f fonts/HomemadeApple-Regular.ttf -fs 50
 ```
 
+Terminal output:
+
 ![sample output](assets/screenshot.png)
+
+Rendered video:
 
 ![slideshow](assets/slideshow.gif)
 
