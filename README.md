@@ -1,5 +1,3 @@
-# sly: a simple cli slideshow generator
-
 `sly` is a lightweight and flexible command-line tool for creating slideshows from your image collections. With support for tansition effect, soundtrack, and title slide, `sly` makes it easy to quickly turn your photos into nice-looking videos.
 
 ## Features
@@ -23,25 +21,22 @@ Make sure you have the following installed:
 
 ### Manual Installation
 
-1. Clone the repository:
+Clone the repository:
+
    ```bash
    git clone https://github.com/mwmdev/sly.git
    cd sly
    ```
 
-2. Create and activate a virtual environment:
-   - **Linux/macOS**:
-     ```bash
-     python3 -m venv venv
-     source venv/bin/activate
-     ```
-   - **Windows**:
-     ```bash
-     python -m venv venv
-     .\venv\Scripts\activate
-     ```
+Create and activate a virtual environment:
 
-3. Install the required Python packages:
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate # or .\venv\Scripts\activate on Windows
+   ```
+
+Install the required Python packages:
+
    ```bash
    pip install -r requirements.txt
    ```
@@ -112,6 +107,8 @@ python sly.py -p img -sw 800 -sh 600 -id 3 -td 1 -t "Live Free" -f fonts/Homemad
 ```
 
 ![sample output](assets/screenshot.png)
+
+![Slideshow](assets/slideshow.mp4)
 
 ## Contributing
 
