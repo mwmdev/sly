@@ -39,5 +39,6 @@ pkgs.mkShell {
 
   shellHook = ''
     export LD_LIBRARY_PATH=${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
+    export PYGAME_DETECT_AVX2=1
   '';
 }
