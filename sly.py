@@ -294,11 +294,15 @@ def apply_transitions(clips: List[ImageClip], transition_duration: float, title_
     if title_slide:
         black_clip = ColorClip(size=clips[0].size, color=(0, 0, 0)).with_duration(1)
         final_clips.extend([black_clip, title_slide.fadein(transition_duration).fadeout(transition_duration), black_clip])
+        
+        # Add a pause after the title slide fades to black
+        pause_duration = 1  # Duration of the pause in seconds
+        pause_clip = ColorClip(size=clips[0].size, color=(0, 0, 0)).with_duration(pause_duration)
+        final_clips.append(pause_clip)
 
     for i, clip in enumerate(clips):
-        if i == 0 and not title_slide:
-            black_clip = ColorClip(size=clip.size, color=(0, 0, 0)).with_duration(transition_duration)
-            final_clips.append(black_clip)
+        if i == 0:
+            # Ensure the first image slide fades in
             final_clips.append(clip.fadein(transition_duration))
         elif i == len(clips) - 1:
             if i > 0:
