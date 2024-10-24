@@ -209,21 +209,75 @@ class CustomProgressBar:
     def __exit__(self, exc_type, exc_value, traceback):
         pass
 
+def process_images(image_files: List[Path], width: int, height: int, duration: float) -> List[ImageClip]:
+    """
+    Process images by rotating, resizing, and converting them into ImageClips.
+
+    Args:
+        image_files (List[Path]): List of image file paths.
+        width (int): Target width for resizing.
+        height (int): Target height for resizing.
+        duration (float): Duration for each image clip.
+
+    Returns:
+        List[ImageClip]: List of processed ImageClips.
+    """
+    processed_images = []
+    for image_file in image_files:
+        with Image.open(image_file) as img:
+            img = rotate_image(img)
+            img = resize_and_crop(img, width, height)
+            processed_images.append(ImageClip(np.array(img)).with_duration(duration))
+    return processed_images
+
+def apply_transitions(clips: List[ImageClip], transition_duration: float, title_slide: ImageClip = None) -> List[ImageClip]:
+    """
+    Apply transitions between clips and add a title slide if provided.
+
+    Args:
+        clips (List[ImageClip]): List of image clips.
+        transition_duration (float): Duration of the transition effect.
+        title_slide (ImageClip, optional): Title slide to add at the beginning.
+
+    Returns:
+        List[ImageClip]: List of clips with transitions applied.
+    """
+    final_clips = []
+    if title_slide:
+        black_clip = ColorClip(size=clips[0].size, color=(0, 0, 0)).with_duration(1)
+        final_clips.extend([black_clip, title_slide.fadein(transition_duration).fadeout(transition_duration), black_clip])
+
+    for i, clip in enumerate(clips):
+        if i == 0 and not title_slide:
+            black_clip = ColorClip(size=clip.size, color=(0, 0, 0)).with_duration(transition_duration)
+            final_clips.append(black_clip)
+            final_clips.append(clip.fadein(transition_duration))
+        elif i == len(clips) - 1:
+            if i > 0:
+                transition = CompositeVideoClip([
+                    clips[i - 1],
+                    clip.with_start(clip.duration - transition_duration).crossfadein(transition_duration)
+                ]).with_duration(clip.duration)
+                final_clips.append(transition)
+            final_clips.append(clip.fadeout(transition_duration))
+        else:
+            transition = CompositeVideoClip([
+                clips[i - 1],
+                clip.with_start(clip.duration - transition_duration).crossfadein(transition_duration)
+            ]).with_duration(clip.duration)
+            final_clips.append(transition)
+            final_clips.append(clip.with_duration(clip.duration - transition_duration))
+    return final_clips
+
 def create_slideshow(args: argparse.Namespace):
     """
     Create a slideshow based on the provided arguments.
 
-    This function orchestrates the entire process of creating a slideshow,
-    including processing images, creating transitions, adding a title slide
-    and soundtrack (if specified), and rendering the final video.
-
     Args:
-        args (argparse.Namespace): The parsed command-line arguments containing
-                                   all the parameters for slideshow creation.
+        args (argparse.Namespace): The parsed command-line arguments.
     """
     start_time = time.time()
 
-    # Check if the output file already exists
     if os.path.exists(args.output):
         overwrite = input(f"The file '{args.output}' already exists. Do you want to overwrite it? [Y/n]: ").lower()
         if overwrite and overwrite != 'y':
@@ -242,90 +296,26 @@ def create_slideshow(args: argparse.Namespace):
         overall_task = progress.add_task("[blue]Creating slideshow", total=100)
 
         try:
-            # Create title slide if specified
+            title_slide = None
             if args.title:
                 progress.update(overall_task, description="[blue]Creating title slide")
-                try:
-                    title_slide = create_title_slide(args.title, args.slideshow_width, args.slideshow_height,
-                                                     args.image_duration, args.font, args.font_size)
-                except Exception as e:
-                    console.print(f"[red]Error creating title slide: {str(e)}[/red]")
+                title_slide = create_title_slide(args.title, args.slideshow_width, args.slideshow_height,
+                                                 args.image_duration, args.font, args.font_size)
                 progress.update(overall_task, advance=10)
 
-            # Process images
             progress.update(overall_task, description="[blue]Processing images")
             image_files = get_image_files(args.path, args.image_order)
-            processed_images = []
-            for i, image_file in enumerate(image_files):
-                progress.update(overall_task, description=f"[blue]Processing image: {image_file.name}")
-                with Image.open(image_file) as img:
-                    img = rotate_image(img)
-                    img = resize_and_crop(img, args.slideshow_width, args.slideshow_height)
-                    processed_images.append((np.array(img), args.image_duration))
-                progress.update(overall_task, advance=20 / len(image_files))
+            clips = process_images(image_files, args.slideshow_width, args.slideshow_height, args.image_duration)
+            progress.update(overall_task, advance=20)
 
-            # Create video clips
-            progress.update(overall_task, description="[blue]Creating video clips")
-            clips = []
-            for i, (img, duration) in enumerate(processed_images):
-                clips.append(ImageClip(img).with_duration(duration))  # Changed from set_duration to with_duration
-                progress.update(overall_task, advance=10 / len(processed_images))
-
-            # Apply transitions
             progress.update(overall_task, description="[blue]Applying transitions")
-            final_clips = []
-            for i, clip in enumerate(clips):
-                if i == 0:
-                    progress.update(overall_task, description="[blue]Applying transitions: First image")
-                    if args.title:
-                        # Black screen for 3 seconds
-                        black_clip = ColorClip(size=(args.slideshow_width, args.slideshow_height), color=(0, 0, 0))
-                        final_clips.append(black_clip.with_duration(1))
-                        
-                        # Title slide with fade in and fade out
-                        title_slide = create_title_slide(args.title, args.slideshow_width, args.slideshow_height, 
-                                                         args.image_duration + 2 * args.transition_duration, args.font, args.font_size)
-                        title_slide = title_slide.fadein(args.transition_duration).fadeout(args.transition_duration)
-                        final_clips.append(title_slide)
-                        
-                        # Black screen for 3 seconds
-                        final_clips.append(black_clip.with_duration(1))
-                        
-                        # First image with fade-in
-                        final_clips.append(clip.fadein(args.transition_duration))
-                    else:
-                        # If no title, fade in the first image from black
-                        black_clip = ColorClip(size=(args.slideshow_width, args.slideshow_height), color=(0, 0, 0))
-                        final_clips.append(black_clip.with_duration(args.transition_duration))
-                        final_clips.append(clip.fadein(args.transition_duration))
-                elif i == len(clips) - 1:
-                    progress.update(overall_task,
-                                    description=f"[blue]Applying transitions: Last image ({image_files[i].name})")
-                    if i > 0:
-                        transition = CompositeVideoClip([
-                            clips[i - 1],
-                            clip.with_start(args.image_duration - args.transition_duration)
-                            .crossfadein(args.transition_duration)
-                        ]).with_duration(args.image_duration)
-                        final_clips.append(transition)
-                    final_clips.append(clip.with_duration(args.image_duration).fadeout(args.transition_duration))
-                else:
-                    progress.update(overall_task, description=f"[blue]Applying transitions: {image_files[i].name}")
-                    transition = CompositeVideoClip([
-                        clips[i - 1],
-                        clip.with_start(args.image_duration - args.transition_duration)
-                        .crossfadein(args.transition_duration)
-                    ]).with_duration(args.image_duration)
-                    final_clips.append(transition)
-                    final_clips.append(clip.with_duration(args.image_duration - args.transition_duration))
-                progress.update(overall_task, advance=20 / len(clips))
+            final_clips = apply_transitions(clips, args.transition_duration, title_slide)
+            progress.update(overall_task, advance=20)
 
-            # Concatenate clips
             progress.update(overall_task, description="[blue]Concatenating clips")
             final_clip = concatenate_videoclips(final_clips)
             progress.update(overall_task, advance=10)
 
-            # Add soundtrack if specified
             if args.soundtrack:
                 progress.update(overall_task, description="[blue]Adding soundtrack")
                 try:
@@ -339,43 +329,34 @@ def create_slideshow(args: argparse.Namespace):
                     console.print(f"[red]Error adding soundtrack: {str(e)}[/red]")
                 progress.update(overall_task, advance=10)
 
-            # Ensure we have a valid fps value
             fps = args.fps if args.fps is not None else 24.0
 
-            # Write final output file
             progress.update(overall_task, description="[blue]Rendering video")
-            custom_progress_bar = CustomProgressBar(progress, overall_task)
-
-            # Determine the number of CPU cores
             num_cores = multiprocessing.cpu_count()
-
-            # Use 75% of available cores, but at least 1
             num_threads = max(1, int(num_cores * 0.75))
 
             final_clip.write_videofile(
                 args.output,
-                fps=fps,  
+                fps=fps,
                 codec="libx264",
                 audio_codec="aac",
                 threads=num_threads,
                 preset="medium",
                 ffmpeg_params=["-crf", "18"],
             )
-            progress.update(overall_task, completed=100)  # Ensure we reach 100%
+            progress.update(overall_task, completed=100)
 
         except Exception as e:
             console.print(f"[red]An error occurred: {str(e)}[/red]")
             raise
 
-    # Final output
     duration = time.time() - start_time
     console.print(
         f"[green]{args.output} rendered successfully!\n"
         f"Duration: {final_clip.duration:.2f} seconds\n"
-        )
+    )
 
 if __name__ == "__main__":
     start_time = time.time()
     args = parse_arguments()
     create_slideshow(args)
-
