@@ -3,3 +3,4 @@ numpy~=2.1.2
 moviepy~=1.0.3
 pillow~=10.4.0
 rich~=13.9.2
+toml~=0.10.2
