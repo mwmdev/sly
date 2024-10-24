@@ -95,9 +95,15 @@ def get_image_files(path: str, order: str) -> List[Path]:
 
     Returns:
         List[Path]: A list of Path objects representing the image files.
+
+    Raises:
+        FileNotFoundError: If no image files are found in the specified directory.
     """
     image_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".jpg_", ".tiff", ".tif", ".webp"}
     image_files = [f for f in Path(path).iterdir() if f.suffix.lower() in image_extensions]
+
+    if not image_files:
+        raise FileNotFoundError(f"No image files found in the specified directory: {path}")
 
     if order == "name":
         image_files.sort(key=lambda x: x.name)
@@ -346,7 +352,12 @@ def create_slideshow(args: argparse.Namespace):
                 progress.update(overall_task, advance=10)
 
             progress.update(overall_task, description="[blue]Processing images")
-            image_files = get_image_files(args.path, args.image_order)
+            try:
+                image_files = get_image_files(args.path, args.image_order)
+            except FileNotFoundError as e:
+                console.print(f"[red]{str(e)}[/red]")
+                return  # Exit the function
+
             clips = process_images(image_files, args.slideshow_width, args.slideshow_height, args.image_duration)
             progress.update(overall_task, advance=20)
 
