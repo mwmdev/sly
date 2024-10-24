@@ -17,6 +17,7 @@ let
       numpy
       proglog
       requests
+      toml
       tqdm
     ];
     doCheck = false;
