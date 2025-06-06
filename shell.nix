@@ -7,26 +7,32 @@ pkgs.mkShell {
     python3Packages.setuptools
     python3Packages.wheel
     
-    # Core dependencies
-    python3Packages.moviepy
-    python3Packages.pillow
-    python3Packages.numpy
-    python3Packages.rich
-    python3Packages.toml
-    
-    # Development dependencies
-    python3Packages.pytest
-    python3Packages.pytest-cov
-    python3Packages.black
-    python3Packages.flake8
-    python3Packages.mypy
-    
     # System dependencies for video processing
     ffmpeg
   ];
 
   shellHook = ''
     echo "Sly development environment loaded!"
+    
+    # Create virtual environment if it doesn't exist
+    if [ ! -d ".venv" ]; then
+      echo "Creating virtual environment..."
+      python -m venv .venv
+    fi
+    
+    # Activate virtual environment
+    source .venv/bin/activate
+    
+    # Upgrade pip and install dependencies
+    echo "Installing/upgrading dependencies..."
+    pip install --upgrade pip
+    pip install -r requirements.txt
+    
+    # Install development dependencies
+    pip install pytest pytest-cov black flake8 mypy
+    
+    echo ""
+    echo "Virtual environment activated!"
     echo "Available commands:"
     echo "  pytest         - Run tests"
     echo "  pytest --cov   - Run tests with coverage"
@@ -39,5 +45,8 @@ pkgs.mkShell {
     echo ""
     echo "To build for PyPI:"
     echo "  python -m build"
+    echo ""
+    echo "To run the application:"
+    echo "sly"
   '';
 }
