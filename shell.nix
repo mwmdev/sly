@@ -1,40 +1,43 @@
-with import <nixpkgs> {};
+{ pkgs ? import <nixpkgs> {} }:
 
 pkgs.mkShell {
   buildInputs = with pkgs; [
-    # System dependencies
+    python3
+    python3Packages.pip
+    python3Packages.setuptools
+    python3Packages.wheel
+    
+    # Core dependencies
+    python3Packages.moviepy
+    python3Packages.pillow
+    python3Packages.numpy
+    python3Packages.rich
+    python3Packages.toml
+    
+    # Development dependencies
+    python3Packages.pytest
+    python3Packages.pytest-cov
+    python3Packages.black
+    python3Packages.flake8
+    python3Packages.mypy
+    
+    # System dependencies for video processing
     ffmpeg
-    git
-    
-    # Python and pip
-    python311
-    python311Packages.pip
-    python311Packages.setuptools
-    python311Packages.wheel
-    python311Packages.virtualenv
-    
-    # System libraries that might be needed by Python packages
-    pkg-config
-    libffi
-    openssl
   ];
 
   shellHook = ''
-    export LD_LIBRARY_PATH=${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
-    export PYGAME_DETECT_AVX2=1
-    
-    # Create and activate virtual environment
-    if [ ! -d ".venv" ]; then
-      echo "Creating virtual environment..."
-      python -m venv .venv
-    fi
-    
-    source .venv/bin/activate
-    
-    # Install Python dependencies from requirements.txt
-    if [ -f "requirements.txt" ]; then
-      echo "Installing Python dependencies from requirements.txt..."
-      pip install -r requirements.txt
-    fi
+    echo "Sly development environment loaded!"
+    echo "Available commands:"
+    echo "  pytest         - Run tests"
+    echo "  pytest --cov   - Run tests with coverage"
+    echo "  black .        - Format code"
+    echo "  flake8 .       - Lint code"
+    echo "  mypy sly       - Type checking"
+    echo ""
+    echo "To install in development mode:"
+    echo "  pip install -e ."
+    echo ""
+    echo "To build for PyPI:"
+    echo "  python -m build"
   '';
 }
