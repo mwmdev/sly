@@ -1,7 +1,7 @@
 """Utility classes and functions for sly slideshow creator."""
 
 import time
-from typing import Any
+from typing import Any, Optional
 
 
 class CustomProgressBar:
@@ -20,7 +20,7 @@ class CustomProgressBar:
         self.rich_progress = rich_progress
         self.rich_task = rich_task
         self.t0 = time.time()
-        self.duration = None
+        self.duration: Optional[float] = None
 
     def __call__(self, t: float) -> int:
         """
@@ -34,13 +34,13 @@ class CustomProgressBar:
         """
         if self.duration is None:
             self.duration = t
-        progress_percentage = t / self.duration if self.duration > 0 else 0
+        progress_percentage = t / self.duration if self.duration and self.duration > 0 else 0
         self.rich_progress.update(
             self.rich_task,
             completed=80 + (progress_percentage * 20),
             description=f"[blue]Writing video: {t:.1f}s / {self.duration:.1f}s",
         )
-        return self.make_animation(t / self.duration)
+        return self.make_animation(t / self.duration if self.duration else 0)
 
     def make_animation(self, progress: float) -> int:
         """

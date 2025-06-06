@@ -2,10 +2,11 @@
 
 import traceback
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Union
 import numpy as np
-from moviepy.editor import ImageClip, CompositeVideoClip, ColorClip
+from moviepy.editor import ImageClip, CompositeVideoClip, ColorClip  # type: ignore
 from PIL import Image, ImageFont, ImageDraw
+from PIL.ImageFont import FreeTypeFont
 from rich.console import Console
 
 from .image_utils import rotate_image, resize_and_crop
@@ -43,6 +44,7 @@ def create_title_slide(
         # Load font
         if font_size is None:
             font_size = min(width, height) // 10
+        font: Union[FreeTypeFont, ImageFont.ImageFont]
         if font_path:
             try:
                 font = ImageFont.truetype(font_path, font_size)
@@ -147,9 +149,9 @@ def apply_transitions(
                 transition = CompositeVideoClip(
                     [
                         clips[i - 1],
-                        clip.set_start(
-                            clip.duration - transition_duration
-                        ).crossfadein(transition_duration),
+                        clip.set_start(clip.duration - transition_duration).crossfadein(
+                            transition_duration
+                        ),
                     ]
                 ).set_duration(clip.duration)
                 final_clips.append(transition)

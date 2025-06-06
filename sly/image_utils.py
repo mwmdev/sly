@@ -104,4 +104,4 @@ def resize_and_crop(
         left = (image.width - new_width) // 2
         image = image.crop((left, 0, left + new_width, image.height))
 
-    return image.resize((target_width, target_height), Image.LANCZOS)
+    return image.resize((target_width, target_height), Image.Resampling.LANCZOS)

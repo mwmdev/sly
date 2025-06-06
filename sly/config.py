@@ -1,7 +1,7 @@
 """Configuration handling for sly slideshow creator."""
 
 import os
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import toml
 from rich.console import Console
 
@@ -20,7 +20,8 @@ def load_config_file(config_path: str) -> Dict[str, Any]:
     """
     try:
         with open(config_path, "r") as file:
-            return toml.load(file)
+            config_data: Dict[str, Any] = toml.load(file)
+            return config_data
     except FileNotFoundError:
         console.print(
             f"[yellow]Config file not found at {config_path}. "
@@ -32,7 +33,7 @@ def load_config_file(config_path: str) -> Dict[str, Any]:
         return {}
 
 
-def get_config_path(custom_path: str = None) -> str:
+def get_config_path(custom_path: Optional[str] = None) -> str:
     """
     Determine the configuration file path.
 

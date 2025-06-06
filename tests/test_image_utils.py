@@ -188,27 +188,27 @@ class TestResizeAndCrop:
         """Test resize and crop functionality with real photo files."""
         if not real_images:
             pytest.skip("No real images available for testing")
-            
+
         # Test with first real image
         image_path = real_images[0]
         with Image.open(image_path) as img:
             original_size = img.size
-            
+
             # Test various common slideshow resolutions
             test_resolutions = [
-                (640, 480),     # Standard definition
-                (1280, 720),    # HD
-                (1920, 1080),   # Full HD
+                (640, 480),  # Standard definition
+                (1280, 720),  # HD
+                (1920, 1080),  # Full HD
             ]
-            
+
             for target_width, target_height in test_resolutions:
                 result = resize_and_crop(img, target_width, target_height)
-                
+
                 # Should always produce exact target dimensions
                 assert result.size == (target_width, target_height)
-                
+
                 # Should preserve the image mode (RGB for photos)
                 assert result.mode == img.mode
-                
+
                 # Result should be a valid image
                 assert isinstance(result, Image.Image)

@@ -4,7 +4,7 @@ import os
 import time
 import multiprocessing
 from typing import Optional
-from moviepy.editor import concatenate_videoclips, AudioFileClip
+from moviepy.editor import concatenate_videoclips, AudioFileClip  # type: ignore
 from rich.console import Console
 from rich.progress import (
     Progress,
@@ -23,7 +23,7 @@ console = Console()
 class SlideshowCreator:
     """Main class for creating slideshows from images."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the slideshow creator."""
         pass
 
