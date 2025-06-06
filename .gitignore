@@ -57,5 +57,8 @@ htmlcov/
 ehthumbs.db
 Thumbs.db
 
+# Videos
+*.mp4
+
 # Project specific
 CLAUDE.md
