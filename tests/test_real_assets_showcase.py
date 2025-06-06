@@ -116,7 +116,7 @@ class TestRealAssetsShowcase:
         
         # Mock MoviePy components
         mock_clip = Mock()
-        mock_clip.with_duration.return_value = mock_clip
+        mock_clip.set_duration.return_value = mock_clip
         mock_image_clip.return_value = mock_clip
         
         # Test processing real images at different resolutions
@@ -139,7 +139,7 @@ class TestRealAssetsShowcase:
             
             # Verify each clip was configured correctly
             for _ in range(len(image_paths)):
-                mock_clip.with_duration.assert_any_call(config["duration"])
+                mock_clip.set_duration.assert_any_call(config["duration"])
 
     @patch('builtins.input', return_value='y')
     @patch('sly.slideshow.AudioFileClip')
@@ -160,21 +160,21 @@ class TestRealAssetsShowcase:
         mock_clip.size = (1920, 1080)  # Add size attribute as tuple
         mock_clip.duration = 3.5  # Add duration attribute
         mock_clip.fps = 30.0  # Add fps attribute
-        mock_clip.with_duration.return_value = mock_clip
+        mock_clip.set_duration.return_value = mock_clip
         mock_clip.fadein.return_value = mock_clip
         mock_clip.fadeout.return_value = mock_clip
-        mock_clip.with_start.return_value = mock_clip
+        mock_clip.set_start.return_value = mock_clip
         mock_clip.crossfadein.return_value = mock_clip
         mock_image_clip.return_value = mock_clip
         
         # Mock ColorClip
         mock_black_clip = Mock()
-        mock_black_clip.with_duration.return_value = mock_black_clip
+        mock_black_clip.set_duration.return_value = mock_black_clip
         mock_color_clip.return_value = mock_black_clip
         
         # Mock CompositeVideoClip
         mock_composite = Mock()
-        mock_composite.with_duration.return_value = mock_composite
+        mock_composite.set_duration.return_value = mock_composite
         mock_composite_clip.return_value = mock_composite
         
         mock_final_clip = Mock()

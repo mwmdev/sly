@@ -117,10 +117,10 @@ def mock_moviepy_clip():
     mock_clip.size = (1920, 1080)
     
     # Set up method chains
-    mock_clip.with_duration.return_value = mock_clip
+    mock_clip.set_duration.return_value = mock_clip
     mock_clip.fadein.return_value = mock_clip
     mock_clip.fadeout.return_value = mock_clip
-    mock_clip.with_start.return_value = mock_clip
+    mock_clip.set_start.return_value = mock_clip
     mock_clip.crossfadein.return_value = mock_clip
     mock_clip.set_audio.return_value = mock_clip
     

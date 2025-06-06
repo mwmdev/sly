@@ -68,7 +68,7 @@ def create_title_slide(
 
         # Convert to ImageClip
         image_array = np.array(image)
-        clip = ImageClip(image_array).with_duration(duration)
+        clip = ImageClip(image_array).set_duration(duration)
 
         # Add only a fade-in effect
         clip = clip.fadein(duration / 2)
@@ -100,7 +100,7 @@ def process_images(
         with Image.open(image_file) as img:
             img = rotate_image(img)
             img = resize_and_crop(img, width, height)
-            processed_images.append(ImageClip(np.array(img)).with_duration(duration))
+            processed_images.append(ImageClip(np.array(img)).set_duration(duration))
     return processed_images
 
 
@@ -122,7 +122,7 @@ def apply_transitions(
     """
     final_clips = []
     if title_slide:
-        black_clip = ColorClip(size=clips[0].size, color=(0, 0, 0)).with_duration(1)
+        black_clip = ColorClip(size=clips[0].size, color=(0, 0, 0)).set_duration(1)
         final_clips.extend(
             [
                 black_clip,
@@ -133,7 +133,7 @@ def apply_transitions(
 
         # Add a pause after the title slide fades to black
         pause_duration = 1  # Duration of the pause in seconds
-        pause_clip = ColorClip(size=clips[0].size, color=(0, 0, 0)).with_duration(
+        pause_clip = ColorClip(size=clips[0].size, color=(0, 0, 0)).set_duration(
             pause_duration
         )
         final_clips.append(pause_clip)
@@ -147,22 +147,22 @@ def apply_transitions(
                 transition = CompositeVideoClip(
                     [
                         clips[i - 1],
-                        clip.with_start(
+                        clip.set_start(
                             clip.duration - transition_duration
                         ).crossfadein(transition_duration),
                     ]
-                ).with_duration(clip.duration)
+                ).set_duration(clip.duration)
                 final_clips.append(transition)
             final_clips.append(clip.fadeout(transition_duration))
         else:
             transition = CompositeVideoClip(
                 [
                     clips[i - 1],
-                    clip.with_start(clip.duration - transition_duration).crossfadein(
+                    clip.set_start(clip.duration - transition_duration).crossfadein(
                         transition_duration
                     ),
                 ]
-            ).with_duration(clip.duration)
+            ).set_duration(clip.duration)
             final_clips.append(transition)
-            final_clips.append(clip.with_duration(clip.duration - transition_duration))
+            final_clips.append(clip.set_duration(clip.duration - transition_duration))
     return final_clips

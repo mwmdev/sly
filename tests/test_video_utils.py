@@ -31,7 +31,7 @@ class TestCreateTitleSlide:
         mock_draw.return_value = mock_draw_obj
         
         mock_clip = Mock()
-        mock_clip.with_duration.return_value = mock_clip
+        mock_clip.set_duration.return_value = mock_clip
         mock_clip.fadein.return_value = mock_clip
         mock_image_clip.return_value = mock_clip
 
@@ -48,7 +48,7 @@ class TestCreateTitleSlide:
         # Verify
         mock_truetype.assert_called_once_with("/path/to/font.ttf", 48)
         mock_image_clip.assert_called_once()
-        mock_clip.with_duration.assert_called_once_with(3.0)
+        mock_clip.set_duration.assert_called_once_with(3.0)
         mock_clip.fadein.assert_called_once_with(1.5)  # duration / 2
         assert result == mock_clip
 
@@ -70,7 +70,7 @@ class TestCreateTitleSlide:
         mock_draw.return_value = mock_draw_obj
         
         mock_clip = Mock()
-        mock_clip.with_duration.return_value = mock_clip
+        mock_clip.set_duration.return_value = mock_clip
         mock_clip.fadein.return_value = mock_clip
         mock_image_clip.return_value = mock_clip
 
@@ -108,7 +108,7 @@ class TestCreateTitleSlide:
         mock_draw.return_value = mock_draw_obj
         
         mock_clip = Mock()
-        mock_clip.with_duration.return_value = mock_clip
+        mock_clip.set_duration.return_value = mock_clip
         mock_clip.fadein.return_value = mock_clip
         mock_image_clip.return_value = mock_clip
 
@@ -144,7 +144,7 @@ class TestCreateTitleSlide:
         mock_draw.return_value = mock_draw_obj
         
         mock_clip = Mock()
-        mock_clip.with_duration.return_value = mock_clip
+        mock_clip.set_duration.return_value = mock_clip
         mock_clip.fadein.return_value = mock_clip
         mock_image_clip.return_value = mock_clip
 
@@ -204,7 +204,7 @@ class TestProcessImages:
             mock_resize_crop.return_value = mock_processed_img
             
             mock_clip = Mock()
-            mock_clip.with_duration.return_value = mock_clip
+            mock_clip.set_duration.return_value = mock_clip
             mock_clips.append(mock_clip)
 
         mock_open.side_effect = [Mock(__enter__=Mock(return_value=img), __exit__=Mock()) 
@@ -224,7 +224,7 @@ class TestProcessImages:
 
         # Verify each clip has duration set
         for clip in mock_clips:
-            clip.with_duration.assert_called_once_with(3.0)
+            clip.set_duration.assert_called_once_with(3.0)
 
     @patch('sly.video_utils.Image.open')
     def test_process_images_file_error(self, mock_open, mock_image_files):
@@ -252,7 +252,7 @@ class TestProcessImages:
         mock_resize_crop.return_value = mock_processed_img
         
         mock_clip = Mock()
-        mock_clip.with_duration.return_value = mock_clip
+        mock_clip.set_duration.return_value = mock_clip
         mock_image_clip.return_value = mock_clip
 
         # Execute with different dimensions
@@ -260,7 +260,7 @@ class TestProcessImages:
 
         # Verify resize_and_crop called with correct dimensions
         mock_resize_crop.assert_called_once_with(mock_img, 800, 600)
-        mock_clip.with_duration.assert_called_once_with(2.5)
+        mock_clip.set_duration.assert_called_once_with(2.5)
 
 
 class TestApplyTransitions:
@@ -277,9 +277,9 @@ class TestApplyTransitions:
             clip.size = (1920, 1080)
             clip.fadein.return_value = clip
             clip.fadeout.return_value = clip
-            clip.with_start.return_value = clip
+            clip.set_start.return_value = clip
             clip.crossfadein.return_value = clip
-            clip.with_duration.return_value = clip
+            clip.set_duration.return_value = clip
             clips.append(clip)
         return clips
 
@@ -293,11 +293,11 @@ class TestApplyTransitions:
         mock_title.fadeout.return_value = mock_title
         
         mock_black_clip = Mock()
-        mock_black_clip.with_duration.return_value = mock_black_clip
+        mock_black_clip.set_duration.return_value = mock_black_clip
         mock_color_clip.return_value = mock_black_clip
         
         mock_transition_clip = Mock()
-        mock_transition_clip.with_duration.return_value = mock_transition_clip
+        mock_transition_clip.set_duration.return_value = mock_transition_clip
         mock_composite.return_value = mock_transition_clip
 
         # Execute
@@ -314,7 +314,7 @@ class TestApplyTransitions:
     def test_apply_transitions_without_title(self, mock_composite, mock_clips):
         """Test applying transitions without title slide."""
         mock_transition_clip = Mock()
-        mock_transition_clip.with_duration.return_value = mock_transition_clip
+        mock_transition_clip.set_duration.return_value = mock_transition_clip
         mock_composite.return_value = mock_transition_clip
 
         # Execute
@@ -340,7 +340,7 @@ class TestApplyTransitions:
     def test_apply_transitions_composite_creation(self, mock_composite, mock_clips):
         """Test that composite clips are created correctly for transitions."""
         mock_transition_clip = Mock()
-        mock_transition_clip.with_duration.return_value = mock_transition_clip
+        mock_transition_clip.set_duration.return_value = mock_transition_clip
         mock_composite.return_value = mock_transition_clip
 
         apply_transitions(mock_clips, 1.5, None)
@@ -362,21 +362,21 @@ class TestApplyTransitions:
         mock_title.fadeout.return_value = mock_title
         
         mock_black_clip = Mock()
-        mock_black_clip.with_duration.return_value = mock_black_clip
+        mock_black_clip.set_duration.return_value = mock_black_clip
         mock_color_clip.return_value = mock_black_clip
         
         mock_transition_clip = Mock()
-        mock_transition_clip.with_duration.return_value = mock_transition_clip
+        mock_transition_clip.set_duration.return_value = mock_transition_clip
         mock_composite.return_value = mock_transition_clip
 
         # Ensure clips have proper numeric duration and methods to avoid Mock arithmetic issues
         for i, clip in enumerate(mock_clips):
             clip.size = (1920, 1080)
             clip.duration = 3.0  # Ensure this is a real number
-            # Make sure with_start returns a proper mock that supports chaining
+            # Make sure set_start returns a proper mock that supports chaining
             chained_mock = Mock()
             chained_mock.crossfadein.return_value = mock_transition_clip
-            clip.with_start.return_value = chained_mock
+            clip.set_start.return_value = chained_mock
 
         # Use only one clip to avoid complex transition logic
         single_clip = [mock_clips[0]]

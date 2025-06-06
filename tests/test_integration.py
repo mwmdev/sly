@@ -93,7 +93,7 @@ class TestRealImageProcessing:
         # Mock MoviePy ImageClip to avoid video dependencies
         with patch('sly.video_utils.ImageClip') as mock_clip:
             mock_instance = mock_clip.return_value
-            mock_instance.with_duration.return_value = mock_instance
+            mock_instance.set_duration.return_value = mock_instance
             
             clips = process_images(files, 640, 480, 2.0)
             
@@ -102,7 +102,7 @@ class TestRealImageProcessing:
             
             # Verify that each clip was given the correct duration
             for _ in range(len(files)):
-                mock_instance.with_duration.assert_any_call(2.0)
+                mock_instance.set_duration.assert_any_call(2.0)
 
     def test_real_image_metadata_preservation(self, real_images):
         """Test that real image metadata is handled properly."""
@@ -176,10 +176,10 @@ class TestRealAudioIntegration:
         mock_clip.size = (1920, 1080)  # Proper tuple for size
         mock_clip.fps = 30.0  # Numeric fps value
         mock_clip.duration = 3.0  # Numeric duration
-        mock_clip.with_duration.return_value = mock_clip
+        mock_clip.set_duration.return_value = mock_clip
         mock_clip.fadein.return_value = mock_clip
         mock_clip.fadeout.return_value = mock_clip
-        mock_clip.with_start.return_value = mock_clip
+        mock_clip.set_start.return_value = mock_clip
         mock_clip.crossfadein.return_value = mock_clip
         
         mock_final_clip = mock_concat.return_value
@@ -193,12 +193,12 @@ class TestRealAudioIntegration:
         
         # Setup CompositeVideoClip and ColorClip mocks
         mock_composite_clip = mock_composite.return_value
-        mock_composite_clip.with_duration.return_value = mock_composite_clip
+        mock_composite_clip.set_duration.return_value = mock_composite_clip
         mock_composite_clip.size = (1920, 1080)
         mock_composite_clip.fps = 30.0
         
         mock_black_clip = mock_color_clip.return_value
-        mock_black_clip.with_duration.return_value = mock_black_clip
+        mock_black_clip.set_duration.return_value = mock_black_clip
         mock_black_clip.size = (1920, 1080)
         
         # Create slideshow with real audio
@@ -247,10 +247,10 @@ class TestRealAudioIntegration:
         mock_clip.size = (1920, 1080)  # Proper tuple for size
         mock_clip.fps = 30.0  # Numeric fps value
         mock_clip.duration = 3.0  # Numeric duration
-        mock_clip.with_duration.return_value = mock_clip
+        mock_clip.set_duration.return_value = mock_clip
         mock_clip.fadein.return_value = mock_clip
         mock_clip.fadeout.return_value = mock_clip
-        mock_clip.with_start.return_value = mock_clip
+        mock_clip.set_start.return_value = mock_clip
         mock_clip.crossfadein.return_value = mock_clip
         
         mock_final_clip = mock_concat.return_value
@@ -265,12 +265,12 @@ class TestRealAudioIntegration:
         
         # Setup CompositeVideoClip and ColorClip mocks
         mock_composite_clip = mock_composite.return_value
-        mock_composite_clip.with_duration.return_value = mock_composite_clip
+        mock_composite_clip.set_duration.return_value = mock_composite_clip
         mock_composite_clip.size = (1920, 1080)
         mock_composite_clip.fps = 30.0
         
         mock_black_clip = mock_color_clip.return_value
-        mock_black_clip.with_duration.return_value = mock_black_clip
+        mock_black_clip.set_duration.return_value = mock_black_clip
         mock_black_clip.size = (1920, 1080)
         
         creator = SlideshowCreator()
@@ -440,10 +440,10 @@ fps = 24.0
         mock_clip.size = (640, 480)  # Proper tuple for size
         mock_clip.fps = 24.0  # Numeric fps value
         mock_clip.duration = 2.0  # Numeric duration
-        mock_clip.with_duration.return_value = mock_clip
+        mock_clip.set_duration.return_value = mock_clip
         mock_clip.fadein.return_value = mock_clip
         mock_clip.fadeout.return_value = mock_clip
-        mock_clip.with_start.return_value = mock_clip
+        mock_clip.set_start.return_value = mock_clip
         mock_clip.crossfadein.return_value = mock_clip
         
         mock_final_clip = mock_concat.return_value
@@ -535,7 +535,7 @@ class TestEdgeCases:
             # Should handle single image without errors
             with patch('sly.video_utils.ImageClip') as mock_clip:
                 mock_instance = mock_clip.return_value
-                mock_instance.with_duration.return_value = mock_instance
+                mock_instance.set_duration.return_value = mock_instance
                 
                 clips = process_images(files, 640, 480, 3.0)
                 assert len(clips) == 1
