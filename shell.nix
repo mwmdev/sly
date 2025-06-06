@@ -1,44 +1,40 @@
 with import <nixpkgs> {};
 
-let
-  moviepy = python311Packages.buildPythonPackage rec {
-    pname = "moviepy";
-    version = "master";
-    src = pkgs.fetchFromGitHub {
-      owner = "Zulko";
-      repo = "moviepy";
-      rev = "master";
-      sha256 = "sha256-y44h96xpP7g1wbplkfS+qF1vDIh6t6AINi+bIkXfjT8=";
-    };
-    propagatedBuildInputs = with python311Packages; [
-      decorator
-      imageio
-      imageio-ffmpeg
-      numpy
-      proglog
-      requests
-      toml
-      tqdm
-    ];
-    doCheck = false;
-  };
-in
 pkgs.mkShell {
   buildInputs = with pkgs; [
+    # System dependencies
     ffmpeg
     git
+    
+    # Python and pip
     python311
-    python311Packages.numpy
-    python311Packages.decorator
-    python311Packages.opencv4
-    python311Packages.pillow
-    python311Packages.pygame
-    python311Packages.rich
-    moviepy
+    python311Packages.pip
+    python311Packages.setuptools
+    python311Packages.wheel
+    python311Packages.virtualenv
+    
+    # System libraries that might be needed by Python packages
+    pkg-config
+    libffi
+    openssl
   ];
 
   shellHook = ''
     export LD_LIBRARY_PATH=${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
     export PYGAME_DETECT_AVX2=1
+    
+    # Create and activate virtual environment
+    if [ ! -d ".venv" ]; then
+      echo "Creating virtual environment..."
+      python -m venv .venv
+    fi
+    
+    source .venv/bin/activate
+    
+    # Install Python dependencies from requirements.txt
+    if [ -f "requirements.txt" ]; then
+      echo "Installing Python dependencies from requirements.txt..."
+      pip install -r requirements.txt
+    fi
   '';
 }
