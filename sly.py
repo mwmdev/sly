@@ -126,19 +126,16 @@ def rotate_image(image: Image.Image) -> Image.Image:
         Image.Image: The rotated image.
     """
     try:
-        for orientation in ExifTags.TAGS.keys():
-            if ExifTags.TAGS[orientation] == 'Orientation':
-                break
-        exif = image._getexif()
+        exif = image.getexif()
         if exif is not None:
-            exif = dict(exif.items())
-            if exif.get(orientation) == 3:
+            orientation = exif.get(0x0112)  # Orientation tag
+            if orientation == 3:
                 image = image.rotate(180, expand=True)
-            elif exif.get(orientation) == 6:
+            elif orientation == 6:
                 image = image.rotate(270, expand=True)
-            elif exif.get(orientation) == 8:
+            elif orientation == 8:
                 image = image.rotate(90, expand=True)
-    except (AttributeError, KeyError, IndexError):
+    except (AttributeError, KeyError, IndexError, TypeError):
         # No EXIF data or no orientation info
         pass
     return image
