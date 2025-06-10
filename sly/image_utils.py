@@ -1,14 +1,76 @@
-"""Image processing utilities for sly slideshow creator."""
+"""Media processing utilities for sly slideshow creator."""
 
 import random
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 from PIL import Image
+
+
+def get_media_files(path: str, order: str) -> List[Path]:
+    """
+    Get a list of image and video files from the specified path, ordered as requested.
+
+    Args:
+        path (str): The directory path containing the media files.
+        order (str): The order to sort the media files ("name", "date", or "random").
+
+    Returns:
+        List[Path]: A list of Path objects representing the media files.
+
+    Raises:
+        FileNotFoundError: If no media files are found in the specified directory.
+    """
+    image_extensions = {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".bmp",
+        ".jpg_",
+        ".tiff",
+        ".tif",
+        ".webp",
+    }
+    
+    video_extensions = {
+        ".mp4",
+        ".avi",
+        ".mov",
+        ".mkv",
+        ".wmv",
+        ".flv",
+        ".webm",
+        ".m4v",
+        ".3gp",
+        ".mpg",
+        ".mpeg",
+    }
+    
+    all_extensions = image_extensions | video_extensions
+    
+    media_files = [
+        f for f in Path(path).iterdir() if f.suffix.lower() in all_extensions
+    ]
+
+    if not media_files:
+        raise FileNotFoundError(
+            f"No image or video files found in the specified directory: {path}"
+        )
+
+    if order == "name":
+        media_files.sort(key=lambda x: x.name)
+    elif order == "date":
+        media_files.sort(key=lambda x: x.stat().st_mtime)
+    elif order == "random":
+        random.shuffle(media_files)
+
+    return media_files
 
 
 def get_image_files(path: str, order: str) -> List[Path]:
     """
     Get a list of image files from the specified path, ordered as requested.
+    Kept for backward compatibility.
 
     Args:
         path (str): The directory path containing the images.
@@ -48,6 +110,56 @@ def get_image_files(path: str, order: str) -> List[Path]:
         random.shuffle(image_files)
 
     return image_files
+
+
+def is_video_file(file_path: Path) -> bool:
+    """
+    Check if a file is a video file based on its extension.
+    
+    Args:
+        file_path (Path): Path to the file to check.
+        
+    Returns:
+        bool: True if the file is a video file, False otherwise.
+    """
+    video_extensions = {
+        ".mp4",
+        ".avi",
+        ".mov",
+        ".mkv",
+        ".wmv",
+        ".flv",
+        ".webm",
+        ".m4v",
+        ".3gp",
+        ".mpg",
+        ".mpeg",
+    }
+    return file_path.suffix.lower() in video_extensions
+
+
+def is_image_file(file_path: Path) -> bool:
+    """
+    Check if a file is an image file based on its extension.
+    
+    Args:
+        file_path (Path): Path to the file to check.
+        
+    Returns:
+        bool: True if the file is an image file, False otherwise.
+    """
+    image_extensions = {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".bmp",
+        ".jpg_",
+        ".tiff",
+        ".tif",
+        ".webp",
+    }
+    return file_path.suffix.lower() in image_extensions
 
 
 def rotate_image(image: Image.Image) -> Image.Image:

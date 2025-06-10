@@ -24,11 +24,11 @@ def parse_arguments() -> argparse.Namespace:
         argparse.Namespace: An object containing all the parsed arguments.
     """
     parser = argparse.ArgumentParser(
-        description="Create a slideshow from a folder of images", prog="sly"
+        description="Create a slideshow from a folder of images and videos", prog="sly"
     )
     parser.add_argument("--config", "-c", type=str, help="Path to a custom config file")
     parser.add_argument(
-        "--path", "-p", type=str, default=None, help="Path to the images directory"
+        "--path", "-p", type=str, default=None, help="Path to the media directory (images and videos)"
     )
     parser.add_argument(
         "--image-duration",
@@ -42,7 +42,7 @@ def parse_arguments() -> argparse.Namespace:
         "-io",
         type=str,
         default=None,
-        help="Order of images: 'name', 'date', or 'random'",
+        help="Order of media files: 'name', 'date', or 'random'",
     )
     parser.add_argument(
         "--transition-duration",
@@ -50,6 +50,14 @@ def parse_arguments() -> argparse.Namespace:
         type=float,
         default=None,
         help="Duration of transition effect in seconds",
+    )
+    parser.add_argument(
+        "--transition-type",
+        "-tt",
+        type=str,
+        default=None,
+        choices=["fade", "crossfade"],
+        help="Type of transition: 'fade' (fade to black) or 'crossfade' (direct crossfade)",
     )
     parser.add_argument(
         "--slideshow-width",
@@ -97,6 +105,27 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--list-fonts", "-lf", action="store_true", help="List all available system fonts and their paths"
     )
+    parser.add_argument(
+        "--video-duration-mode",
+        "-vdm",
+        type=str,
+        default=None,
+        choices=["original", "fixed", "limit"],
+        help="How to handle video durations: 'original' (keep original), 'fixed' (use image duration), 'limit' (cap at 3x image duration)",
+    )
+    parser.add_argument(
+        "--include-videos",
+        "-iv",
+        action="store_true",
+        default=None,
+        help="Include video files in slideshow (default: True)",
+    )
+    parser.add_argument(
+        "--images-only",
+        "-imo",
+        action="store_true",
+        help="Process only image files, ignore videos",
+    )
 
     args = parser.parse_args()
 
@@ -120,6 +149,8 @@ def parse_arguments() -> argparse.Namespace:
         args.image_order = "name"
     if args.transition_duration is None:
         args.transition_duration = 1.0
+    if args.transition_type is None:
+        args.transition_type = "crossfade"
     if args.slideshow_width is None:
         args.slideshow_width = 1920
     if args.slideshow_height is None:
@@ -128,6 +159,14 @@ def parse_arguments() -> argparse.Namespace:
         args.output = "slideshow.mp4"
     if args.fps is None:
         args.fps = 24.0
+    if args.video_duration_mode is None:
+        args.video_duration_mode = "original"
+    
+    # Handle video inclusion logic
+    if args.images_only:
+        args.include_videos = False
+    elif args.include_videos is None:
+        args.include_videos = True
 
     # Print final argument values
     if args.verbose:
@@ -151,7 +190,7 @@ def validate_arguments(args: argparse.Namespace) -> bool:
         bool: True if arguments are valid, False otherwise
     """
     if not args.path:
-        console.print("[red]Error: Path to images directory is required[/red]")
+        console.print("[red]Error: Path to media directory is required[/red]")
         return False
 
     if args.image_duration <= 0:
@@ -172,7 +211,7 @@ def validate_arguments(args: argparse.Namespace) -> bool:
 
     if args.image_order not in ["name", "date", "random"]:
         console.print(
-            "[red]Error: Image order must be 'name', 'date', or 'random'[/red]"
+            "[red]Error: Media order must be 'name', 'date', or 'random'[/red]"
         )
         return False
 
@@ -199,6 +238,7 @@ def main() -> None:
             image_duration=args.image_duration,
             image_order=args.image_order,
             transition_duration=args.transition_duration,
+            transition_type=args.transition_type,
             slideshow_width=args.slideshow_width,
             slideshow_height=args.slideshow_height,
             title=args.title,
@@ -207,6 +247,8 @@ def main() -> None:
             soundtrack=args.soundtrack,
             fps=args.fps,
             verbose=args.verbose,
+            video_duration_mode=args.video_duration_mode,
+            include_videos=args.include_videos,
         )
 
     except KeyboardInterrupt:

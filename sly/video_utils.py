@@ -4,12 +4,12 @@ import traceback
 from pathlib import Path
 from typing import List, Optional, Union
 import numpy as np
-from moviepy.editor import ImageClip, CompositeVideoClip, ColorClip  # type: ignore
+from moviepy.editor import ImageClip, VideoFileClip, CompositeVideoClip, ColorClip  # type: ignore
 from PIL import Image, ImageFont, ImageDraw
 from PIL.ImageFont import FreeTypeFont
 from rich.console import Console
 
-from .image_utils import rotate_image, resize_and_crop
+from .image_utils import rotate_image, resize_and_crop, is_video_file, is_image_file
 
 console = Console()
 
@@ -82,11 +82,76 @@ def create_title_slide(
         raise
 
 
+def process_media_files(
+    media_files: List[Path], 
+    width: int, 
+    height: int, 
+    image_duration: float,
+    video_duration_mode: str = "original"
+) -> List[Union[ImageClip, VideoFileClip]]:
+    """
+    Process media files (images and videos) by resizing and converting them into clips.
+
+    Args:
+        media_files (List[Path]): List of media file paths.
+        width (int): Target width for resizing.
+        height (int): Target height for resizing.
+        image_duration (float): Duration for each image clip.
+        video_duration_mode (str): How to handle video durations:
+            - "original": Use original video duration
+            - "fixed": Use image_duration for all videos
+            - "limit": Cap videos at image_duration * 3
+
+    Returns:
+        List[Union[ImageClip, VideoFileClip]]: List of processed clips.
+    """
+    processed_clips = []
+    
+    for media_file in media_files:
+        try:
+            if is_video_file(media_file):
+                # Process video file
+                video_clip = VideoFileClip(str(media_file))
+                
+                # Resize video to target dimensions while maintaining aspect ratio
+                video_clip = video_clip.resize(height=height).resize(width=width)
+                
+                # Handle video duration based on mode
+                if video_duration_mode == "fixed":
+                    video_clip = video_clip.set_duration(image_duration)
+                elif video_duration_mode == "limit":
+                    max_duration = image_duration * 3
+                    if video_clip.duration > max_duration:
+                        video_clip = video_clip.subclip(0, max_duration)
+                # For "original" mode, keep the original duration
+                
+                processed_clips.append(video_clip)
+                console.print(f"[green]Processed video: {media_file.name} ({video_clip.duration:.1f}s)[/green]")
+                
+            elif is_image_file(media_file):
+                # Process image file (existing logic)
+                with Image.open(media_file) as img:
+                    img = rotate_image(img)
+                    img = resize_and_crop(img, width, height)
+                    image_clip = ImageClip(np.array(img)).set_duration(image_duration)
+                    processed_clips.append(image_clip)
+                    console.print(f"[blue]Processed image: {media_file.name}[/blue]")
+            else:
+                console.print(f"[yellow]Skipping unsupported file: {media_file.name}[/yellow]")
+                
+        except Exception as e:
+            console.print(f"[red]Error processing {media_file.name}: {str(e)}[/red]")
+            continue
+            
+    return processed_clips
+
+
 def process_images(
     image_files: List[Path], width: int, height: int, duration: float
 ) -> List[ImageClip]:
     """
     Process images by rotating, resizing, and converting them into ImageClips.
+    Kept for backward compatibility.
 
     Args:
         image_files (List[Path]): List of image file paths.
@@ -107,64 +172,41 @@ def process_images(
 
 
 def apply_transitions(
-    clips: List[ImageClip],
+    clips: List[Union[ImageClip, VideoFileClip]],
     transition_duration: float,
     title_slide: Optional[ImageClip] = None,
-) -> List[ImageClip]:
+) -> List[Union[ImageClip, VideoFileClip, ColorClip]]:
     """
-    Apply transitions between clips and add a title slide if provided.
+    Apply basic fade effects to clips and add title slide if provided.
+    
+    This approach applies simple fade-in/fade-out effects and prepares clips
+    for crossfade transitions to be handled during concatenation.
 
     Args:
-        clips (List[ImageClip]): List of image clips.
+        clips (List[Union[ImageClip, VideoFileClip]]): List of media clips.
         transition_duration (float): Duration of the transition effect.
         title_slide (ImageClip, optional): Title slide to add at the beginning.
 
     Returns:
-        List[ImageClip]: List of clips with transitions applied.
+        List[Union[ImageClip, VideoFileClip, ColorClip]]: List of clips prepared for concatenation.
     """
+    if not clips:
+        return []
+        
     final_clips = []
+    
+    # Add title slide if provided
     if title_slide:
-        black_clip = ColorClip(size=clips[0].size, color=(0, 0, 0)).set_duration(1)
-        final_clips.extend(
-            [
-                black_clip,
-                title_slide.fadein(transition_duration).fadeout(transition_duration),
-                black_clip,
-            ]
-        )
-
-        # Add a pause after the title slide fades to black
-        pause_duration = 1  # Duration of the pause in seconds
-        pause_clip = ColorClip(size=clips[0].size, color=(0, 0, 0)).set_duration(
-            pause_duration
-        )
+        black_clip = ColorClip(size=clips[0].size, color=(0, 0, 0)).set_duration(0.5)
+        final_clips.append(black_clip)
+        final_clips.append(title_slide.fadein(transition_duration).fadeout(transition_duration))
+        
+        # Add a brief pause after the title slide
+        pause_clip = ColorClip(size=clips[0].size, color=(0, 0, 0)).set_duration(0.5)
         final_clips.append(pause_clip)
 
-    for i, clip in enumerate(clips):
-        if i == 0:
-            # Ensure the first image slide fades in
-            final_clips.append(clip.fadein(transition_duration))
-        elif i == len(clips) - 1:
-            if i > 0:
-                transition = CompositeVideoClip(
-                    [
-                        clips[i - 1],
-                        clip.set_start(clip.duration - transition_duration).crossfadein(
-                            transition_duration
-                        ),
-                    ]
-                ).set_duration(clip.duration)
-                final_clips.append(transition)
-            final_clips.append(clip.fadeout(transition_duration))
-        else:
-            transition = CompositeVideoClip(
-                [
-                    clips[i - 1],
-                    clip.set_start(clip.duration - transition_duration).crossfadein(
-                        transition_duration
-                    ),
-                ]
-            ).set_duration(clip.duration)
-            final_clips.append(transition)
-            final_clips.append(clip.set_duration(clip.duration - transition_duration))
+    # Process each clip - just add them as-is, transitions will be handled during concatenation
+    for clip in clips:
+        final_clips.append(clip)
+    
     return final_clips

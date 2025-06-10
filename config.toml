@@ -1,16 +1,19 @@
 # Configuration file for sly.py
 
-# Path to the images directory
+# Path to the media directory (images and videos)
 path = "."
 
 # Duration of each image in seconds
 image_duration = 5.0
 
-# Order of images: "name", "date", or "random"
+# Order of media files: "name", "date", or "random"
 image_order = "random"
 
 # Duration of transition effect in seconds
 transition_duration = 1.0
+
+# Type of transition: "fade" (fade to black) or "crossfade" (direct crossfade)
+transition_type = "crossfade"
 
 # Width of the slideshow in pixels
 slideshow_width = 1920
@@ -35,4 +38,10 @@ soundtrack = ""
 
 # Frames per second for the output video
 fps = 24.0
+
+# How to handle video durations: "original", "fixed", or "limit"
+video_duration_mode = "original"
+
+# Include video files in slideshow (true/false)
+include_videos = true
 

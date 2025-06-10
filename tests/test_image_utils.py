@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 import pytest
 from PIL import Image
 
-from sly.image_utils import get_image_files, rotate_image, resize_and_crop
+from sly.image_utils import get_image_files, get_media_files, rotate_image, resize_and_crop, is_video_file, is_image_file
 
 
 class TestGetImageFiles:
@@ -212,3 +212,165 @@ class TestResizeAndCrop:
 
                 # Result should be a valid image
                 assert isinstance(result, Image.Image)
+
+
+class TestGetMediaFiles:
+    """Test cases for get_media_files function (images and videos)."""
+
+    def test_get_media_files_mixed_content(self):
+        """Test getting mixed image and video files."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create test media files
+            media_files = ["photo.jpg", "video.mp4", "image.png", "movie.avi"]
+            for filename in media_files:
+                Path(temp_dir, filename).touch()
+
+            result = get_media_files(temp_dir, "name")
+            result_names = [f.name for f in result]
+
+            assert sorted(result_names) == ["image.png", "movie.avi", "photo.jpg", "video.mp4"]
+
+    def test_get_media_files_video_extensions(self):
+        """Test that all supported video extensions are recognized."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create files with various video extensions
+            video_extensions = [
+                ".mp4", ".avi", ".mov", ".mkv", ".wmv", 
+                ".flv", ".webm", ".m4v", ".3gp", ".mpg", ".mpeg"
+            ]
+            for i, ext in enumerate(video_extensions):
+                Path(temp_dir, f"video{i}{ext}").touch()
+
+            result = get_media_files(temp_dir, "name")
+            assert len(result) == len(video_extensions)
+
+    def test_get_media_files_images_only(self):
+        """Test getting only image files when no videos present."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create test image files
+            image_files = ["a.jpg", "b.png", "c.gif"]
+            for filename in image_files:
+                Path(temp_dir, filename).touch()
+
+            result = get_media_files(temp_dir, "name")
+            result_names = [f.name for f in result]
+
+            assert result_names == ["a.jpg", "b.png", "c.gif"]
+
+    def test_get_media_files_videos_only(self):
+        """Test getting only video files when no images present."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create test video files
+            video_files = ["movie1.mp4", "movie2.avi", "movie3.mov"]
+            for filename in video_files:
+                Path(temp_dir, filename).touch()
+
+            result = get_media_files(temp_dir, "name")
+            result_names = [f.name for f in result]
+
+            assert result_names == ["movie1.mp4", "movie2.avi", "movie3.mov"]
+
+    def test_get_media_files_empty_directory(self):
+        """Test that FileNotFoundError is raised for directory with no media files."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create a non-media file
+            Path(temp_dir, "document.txt").touch()
+
+            with pytest.raises(FileNotFoundError, match="No image or video files found"):
+                get_media_files(temp_dir, "name")
+
+    def test_get_media_files_date_order(self):
+        """Test getting media files ordered by date."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create test media files with different timestamps
+            files = []
+            for i, filename in enumerate(["old.jpg", "newer.mp4", "newest.png"]):
+                filepath = Path(temp_dir, filename)
+                filepath.touch()
+                # Modify the timestamp
+                os.utime(filepath, (1000 + i, 1000 + i))
+                files.append(filepath)
+
+            result = get_media_files(temp_dir, "date")
+            result_names = [f.name for f in result]
+
+            assert result_names == ["old.jpg", "newer.mp4", "newest.png"]
+
+
+class TestFileTypeDetection:
+    """Test cases for file type detection functions."""
+
+    def test_is_video_file_positive_cases(self):
+        """Test video file detection for valid video files."""
+        video_files = [
+            Path("movie.mp4"),
+            Path("clip.avi"),
+            Path("video.mov"),
+            Path("film.mkv"),
+            Path("recording.wmv"),
+            Path("stream.flv"),
+            Path("content.webm"),
+            Path("mobile.m4v"),
+            Path("phone.3gp"),
+            Path("old.mpg"),
+            Path("classic.mpeg"),
+        ]
+        
+        for video_file in video_files:
+            assert is_video_file(video_file), f"{video_file} should be detected as video"
+
+    def test_is_video_file_negative_cases(self):
+        """Test video file detection for non-video files."""
+        non_video_files = [
+            Path("photo.jpg"),
+            Path("image.png"),
+            Path("document.txt"),
+            Path("archive.zip"),
+            Path("song.mp3"),
+            Path("presentation.ppt"),
+        ]
+        
+        for non_video_file in non_video_files:
+            assert not is_video_file(non_video_file), f"{non_video_file} should not be detected as video"
+
+    def test_is_image_file_positive_cases(self):
+        """Test image file detection for valid image files."""
+        image_files = [
+            Path("photo.jpg"),
+            Path("picture.jpeg"),
+            Path("graphic.png"),
+            Path("animation.gif"),
+            Path("bitmap.bmp"),
+            Path("scan.tiff"),
+            Path("document.tif"),
+            Path("web.webp"),
+        ]
+        
+        for image_file in image_files:
+            assert is_image_file(image_file), f"{image_file} should be detected as image"
+
+    def test_is_image_file_negative_cases(self):
+        """Test image file detection for non-image files."""
+        non_image_files = [
+            Path("video.mp4"),
+            Path("movie.avi"),
+            Path("document.txt"),
+            Path("archive.zip"),
+            Path("song.mp3"),
+            Path("presentation.ppt"),
+        ]
+        
+        for non_image_file in non_image_files:
+            assert not is_image_file(non_image_file), f"{non_image_file} should not be detected as image"
+
+    def test_case_insensitive_detection(self):
+        """Test that file type detection is case insensitive."""
+        # Test uppercase extensions
+        assert is_video_file(Path("VIDEO.MP4"))
+        assert is_video_file(Path("movie.AVI"))
+        assert is_image_file(Path("PHOTO.JPG"))
+        assert is_image_file(Path("image.PNG"))
+
+        # Test mixed case extensions
+        assert is_video_file(Path("clip.Mp4"))
+        assert is_image_file(Path("pic.JpG"))

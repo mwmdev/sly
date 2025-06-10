@@ -264,3 +264,122 @@ class TestMain:
 
         # Should not raise exception
         main()
+
+
+class TestVideoAndTransitionArguments:
+    """Test cases for new video and transition argument functionality."""
+
+    @patch("sys.argv", ["sly", "--transition-type", "fade"])
+    @patch("sly.cli.get_config_path")
+    @patch("sly.cli.load_config_file")
+    def test_parse_arguments_transition_type(self, mock_load_config, mock_get_config_path):
+        """Test parsing transition type argument."""
+        mock_get_config_path.return_value = "config.toml"
+        mock_load_config.return_value = {}
+
+        args = parse_arguments()
+
+        assert args.transition_type == "fade"
+
+    @patch("sys.argv", ["sly", "--video-duration-mode", "fixed"])
+    @patch("sly.cli.get_config_path")
+    @patch("sly.cli.load_config_file")
+    def test_parse_arguments_video_duration_mode(self, mock_load_config, mock_get_config_path):
+        """Test parsing video duration mode argument."""
+        mock_get_config_path.return_value = "config.toml"
+        mock_load_config.return_value = {}
+
+        args = parse_arguments()
+
+        assert args.video_duration_mode == "fixed"
+
+    @patch("sys.argv", ["sly", "--include-videos"])
+    @patch("sly.cli.get_config_path")
+    @patch("sly.cli.load_config_file")
+    def test_parse_arguments_include_videos(self, mock_load_config, mock_get_config_path):
+        """Test parsing include videos argument."""
+        mock_get_config_path.return_value = "config.toml"
+        mock_load_config.return_value = {}
+
+        args = parse_arguments()
+
+        assert args.include_videos is True
+
+    @patch("sys.argv", ["sly", "--images-only"])
+    @patch("sly.cli.get_config_path")
+    @patch("sly.cli.load_config_file")
+    def test_parse_arguments_images_only(self, mock_load_config, mock_get_config_path):
+        """Test parsing images only argument."""
+        mock_get_config_path.return_value = "config.toml"
+        mock_load_config.return_value = {}
+
+        args = parse_arguments()
+
+        assert args.images_only is True
+        assert args.include_videos is False  # Should be set to False when images_only is True
+
+    @patch("sys.argv", ["sly"])
+    @patch("sly.cli.get_config_path")
+    @patch("sly.cli.load_config_file")
+    def test_parse_arguments_video_defaults(self, mock_load_config, mock_get_config_path):
+        """Test default values for video-related arguments."""
+        mock_get_config_path.return_value = "config.toml"
+        mock_load_config.return_value = {}
+
+        args = parse_arguments()
+
+        assert args.transition_type == "crossfade"
+        assert args.video_duration_mode == "original"
+        assert args.include_videos is True
+
+    @patch("sys.argv", ["sly"])
+    @patch("sly.cli.get_config_path")
+    @patch("sly.cli.load_config_file")
+    def test_parse_arguments_video_config_override(
+        self, mock_load_config, mock_get_config_path
+    ):
+        """Test that video config file values override defaults."""
+        mock_get_config_path.return_value = "config.toml"
+        mock_load_config.return_value = {
+            "transition-type": "fade",
+            "video-duration-mode": "limit",
+            "include-videos": False,
+        }
+
+        args = parse_arguments()
+
+        assert args.transition_type == "fade"
+        assert args.video_duration_mode == "limit"
+        assert args.include_videos is False
+
+    @patch("sly.cli.parse_arguments")
+    @patch("sly.cli.validate_arguments")
+    @patch("sly.cli.SlideshowCreator")
+    def test_main_with_video_arguments(self, mock_creator_class, mock_validate, mock_parse):
+        """Test main function passes video arguments to slideshow creator."""
+        # Mock arguments with video settings
+        mock_args = MagicMock()
+        mock_args.path = "./media"
+        mock_args.output = "test.mp4"
+        mock_args.transition_type = "crossfade"
+        mock_args.video_duration_mode = "original"
+        mock_args.include_videos = True
+        mock_args.verbose = False
+        mock_args.list_fonts = False
+
+        mock_parse.return_value = mock_args
+        mock_validate.return_value = True
+
+        # Mock slideshow creator
+        mock_creator = MagicMock()
+        mock_creator_class.return_value = mock_creator
+
+        main()
+
+        # Verify video arguments are passed to create_slideshow
+        mock_creator.create_slideshow.assert_called_once()
+        call_kwargs = mock_creator.create_slideshow.call_args[1]
+        
+        assert call_kwargs["transition_type"] == "crossfade"
+        assert call_kwargs["video_duration_mode"] == "original"
+        assert call_kwargs["include_videos"] is True

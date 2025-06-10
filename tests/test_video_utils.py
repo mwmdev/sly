@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch, MagicMock, call
 from pathlib import Path
 from PIL import Image, ImageFont
 
-from sly.video_utils import create_title_slide, process_images, apply_transitions
+from sly.video_utils import create_title_slide, process_images, process_media_files, apply_transitions
 
 
 class TestCreateTitleSlide:
@@ -451,3 +451,253 @@ class TestVideoUtilsIntegration:
                 assert img_path.exists()
                 with Image.open(img_path) as img:
                     assert img.size == (100, 100)
+
+
+class TestProcessMediaFiles:
+    """Test cases for process_media_files function (mixed images and videos)."""
+
+    @pytest.fixture
+    def mock_media_files(self):
+        """Create mock mixed media file paths."""
+        return [
+            Path("image1.jpg"),
+            Path("video1.mp4"),
+            Path("image2.png"),
+            Path("video2.avi")
+        ]
+
+    @patch("sly.video_utils.is_video_file")
+    @patch("sly.video_utils.is_image_file")
+    @patch("sly.video_utils.VideoFileClip")
+    @patch("sly.video_utils.Image.open")
+    @patch("sly.video_utils.rotate_image")
+    @patch("sly.video_utils.resize_and_crop")
+    @patch("sly.video_utils.ImageClip")
+    def test_process_media_files_mixed_content(
+        self,
+        mock_image_clip,
+        mock_resize_crop,
+        mock_rotate,
+        mock_open,
+        mock_video_clip,
+        mock_is_image,
+        mock_is_video,
+        mock_media_files,
+    ):
+        """Test processing mixed image and video files."""
+        # Setup file type detection
+        def side_effect_is_video(path):
+            return str(path).endswith(('.mp4', '.avi'))
+        
+        def side_effect_is_image(path):
+            return str(path).endswith(('.jpg', '.png'))
+        
+        mock_is_video.side_effect = side_effect_is_video
+        mock_is_image.side_effect = side_effect_is_image
+
+        # Setup video clips
+        mock_video_clips = []
+        for i in range(2):  # Two videos
+            mock_clip = Mock()
+            mock_clip.duration = 5.0
+            mock_clip.resize.return_value = mock_clip
+            mock_video_clips.append(mock_clip)
+        mock_video_clip.side_effect = mock_video_clips
+
+        # Setup image processing
+        mock_images = []
+        mock_image_clips = []
+        for i in range(2):  # Two images
+            mock_img = Mock()
+            mock_images.append(mock_img)
+            
+            mock_img_clip = Mock()
+            mock_img_clip.set_duration.return_value = mock_img_clip
+            mock_image_clips.append(mock_img_clip)
+
+        mock_open.side_effect = [
+            Mock(__enter__=Mock(return_value=img), __exit__=Mock())
+            for img in mock_images
+        ]
+        mock_rotate.side_effect = mock_images
+        mock_resize_crop.side_effect = mock_images
+        mock_image_clip.side_effect = mock_image_clips
+
+        # Execute
+        result = process_media_files(mock_media_files, 1920, 1080, 3.0, "original")
+
+        # Verify we got clips for all files
+        assert len(result) == 4
+
+        # Verify video processing was called
+        assert mock_video_clip.call_count == 2
+
+        # Verify image processing was called
+        assert mock_open.call_count == 2
+        assert mock_image_clip.call_count == 2
+
+    @patch("sly.video_utils.is_video_file")
+    @patch("sly.video_utils.VideoFileClip")
+    def test_process_media_files_video_duration_modes(
+        self, mock_video_clip, mock_is_video
+    ):
+        """Test different video duration handling modes."""
+        mock_is_video.return_value = True
+        
+        # Setup video clip with 10 second duration
+        mock_clip = Mock()
+        mock_clip.duration = 10.0
+        mock_clip.resize.return_value = mock_clip
+        mock_clip.set_duration.return_value = mock_clip
+        mock_clip.subclip.return_value = mock_clip
+        mock_video_clip.return_value = mock_clip
+
+        video_files = [Path("video.mp4")]
+
+        # Test "fixed" mode
+        process_media_files(video_files, 1920, 1080, 3.0, "fixed")
+        mock_clip.set_duration.assert_called_with(3.0)
+
+        # Reset mock
+        mock_clip.reset_mock()
+
+        # Test "limit" mode (should cap at 3.0 * 3 = 9.0, but video is 10.0)
+        process_media_files(video_files, 1920, 1080, 3.0, "limit")
+        mock_clip.subclip.assert_called_with(0, 9.0)
+
+        # Reset mock
+        mock_clip.reset_mock()
+
+        # Test "original" mode (no duration changes)
+        process_media_files(video_files, 1920, 1080, 3.0, "original")
+        mock_clip.set_duration.assert_not_called()
+        mock_clip.subclip.assert_not_called()
+
+    @patch("sly.video_utils.is_video_file")
+    @patch("sly.video_utils.is_image_file")
+    @patch("sly.video_utils.console")
+    def test_process_media_files_error_handling(
+        self, mock_console, mock_is_image, mock_is_video
+    ):
+        """Test error handling in media file processing."""
+        mock_is_video.return_value = False
+        mock_is_image.return_value = False
+
+        # Should handle unsupported file types gracefully
+        result = process_media_files([Path("unsupported.xyz")], 1920, 1080, 3.0)
+        
+        # Should print warning and continue
+        mock_console.print.assert_called()
+        assert len(result) == 0  # No clips should be added for unsupported files
+
+
+class TestTransitionTypes:
+    """Test cases for new transition types functionality."""
+
+    @pytest.fixture
+    def mock_clips(self):
+        """Create mock video clips for transition testing."""
+        clips = []
+        for i in range(3):
+            clip = Mock()
+            clip.duration = 3.0
+            clip.size = (1920, 1080)
+            clip.fadein.return_value = clip
+            clip.fadeout.return_value = clip
+            clips.append(clip)
+        return clips
+
+    @patch("sly.slideshow.create_fade_sequence")
+    @patch("sly.slideshow.create_crossfade_sequence")
+    def test_transition_type_selection(
+        self, mock_crossfade, mock_fade, mock_clips
+    ):
+        """Test that correct transition function is called based on type."""
+        # Import here to avoid circular imports in tests
+        from sly.slideshow import create_transition_sequence
+        
+        mock_fade.return_value = Mock()
+        mock_crossfade.return_value = Mock()
+
+        # Test fade transition
+        create_transition_sequence(mock_clips, 1.0, "fade")
+        mock_fade.assert_called_once_with(mock_clips, 1.0)
+
+        # Test crossfade transition
+        create_transition_sequence(mock_clips, 1.0, "crossfade")
+        mock_crossfade.assert_called_once_with(mock_clips, 1.0)
+
+    def test_fade_transition_logic(self, mock_clips):
+        """Test fade transition logic."""
+        from sly.slideshow import create_fade_sequence
+        
+        # Mock concatenate_videoclips
+        with patch("sly.slideshow.concatenate_videoclips") as mock_concat:
+            mock_concat.return_value = Mock()
+            
+            create_fade_sequence(mock_clips, 1.0)
+            
+            # Verify first clip gets fade in
+            mock_clips[0].fadein.assert_called_with(1.0)
+            
+            # Verify last clip gets fade out
+            mock_clips[-1].fadeout.assert_called_with(1.0)
+            
+            # Verify middle clips get both fades
+            if len(mock_clips) > 2:
+                mock_clips[1].fadein.assert_called_with(0.5)  # transition_duration / 2
+                mock_clips[1].fadeout.assert_called_with(0.5)
+
+    @patch("sly.slideshow.CompositeVideoClip")
+    def test_crossfade_transition_logic(self, mock_composite, mock_clips):
+        """Test crossfade transition logic."""
+        from sly.slideshow import create_crossfade_sequence
+        
+        # Setup mock composite clip
+        mock_result = Mock()
+        mock_composite.return_value = mock_result
+        
+        # Mock the set_start and crossfadein methods
+        for clip in mock_clips:
+            clip.set_start.return_value = clip
+            clip.crossfadein.return_value = clip
+        
+        result = create_crossfade_sequence(mock_clips, 1.0)
+        
+        # Verify first clip gets fade in
+        mock_clips[0].fadein.assert_called_with(1.0)
+        
+        # Verify last clip gets fade out
+        mock_clips[-1].fadeout.assert_called_with(1.0)
+        
+        # Verify composite clip is created
+        mock_composite.assert_called_once()
+        assert result == mock_result
+
+    def test_single_clip_transitions(self, mock_clips):
+        """Test transition behavior with single clip."""
+        from sly.slideshow import create_fade_sequence, create_crossfade_sequence
+        
+        single_clip = [mock_clips[0]]
+        
+        # Both transition types should handle single clips the same way
+        fade_result = create_fade_sequence(single_clip, 1.0)
+        crossfade_result = create_crossfade_sequence(single_clip, 1.0)
+        
+        # Both should apply fade in and out
+        assert mock_clips[0].fadein.call_count >= 2  # Called by both functions
+        assert mock_clips[0].fadeout.call_count >= 2  # Called by both functions
+
+    def test_unknown_transition_type(self, mock_clips):
+        """Test handling of unknown transition types."""
+        from sly.slideshow import create_transition_sequence
+        
+        with patch("sly.slideshow.create_crossfade_sequence") as mock_crossfade:
+            with patch("sly.slideshow.console") as mock_console:
+                mock_crossfade.return_value = Mock()
+                
+                # Should fall back to crossfade and print warning
+                create_transition_sequence(mock_clips, 1.0, "unknown_type")
+                
+                mock_console.print.assert_called_once()
+                mock_crossfade.assert_called_once_with(mock_clips, 1.0)
