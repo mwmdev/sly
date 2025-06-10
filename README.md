@@ -69,6 +69,16 @@ sly --path ./photos --soundtrack music.mp3
 sly --path ./photos --image-duration 5 --transition-duration 2
 ```
 
+### Font Management
+
+```bash
+# List all available system fonts
+sly --list-fonts
+
+# Use a specific font for titles
+sly --path ./photos --title "My Vacation" --font "Arial"
+```
+
 ### Advanced Options
 
 ```bash
@@ -124,6 +134,7 @@ font-size = 72
 | `--soundtrack` | `-st` | Background audio file | None |
 | `--config` | `-c` | Custom config file path | `config.toml` |
 | `--verbose` | `-v` | Verbose output | `False` |
+| `--list-fonts` | `-lf` | List all available system fonts | N/A |
 
 ## Development
 

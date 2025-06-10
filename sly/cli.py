@@ -8,6 +8,7 @@ from rich.console import Console
 
 from .config import load_config_file, get_config_path
 from .slideshow import SlideshowCreator
+from .font_utils import list_fonts
 
 # Only show error messages
 logging.basicConfig(level=logging.ERROR)
@@ -92,6 +93,9 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Print more information"
+    )
+    parser.add_argument(
+        "--list-fonts", "-lf", action="store_true", help="List all available system fonts and their paths"
     )
 
     args = parser.parse_args()
@@ -180,6 +184,11 @@ def main() -> None:
     try:
         args = parse_arguments()
 
+        # Handle --list-fonts argument
+        if args.list_fonts:
+            list_fonts()
+            return
+
         if not validate_arguments(args):
             return
 
@@ -204,7 +213,7 @@ def main() -> None:
         console.print("\n[yellow]Operation cancelled by user[/yellow]")
     except Exception as e:
         console.print(f"[red]Error: {str(e)}[/red]")
-        if args.verbose:
+        if hasattr(locals().get('args'), 'verbose') and args.verbose:
             import traceback
 
             console.print(f"[red]Traceback: {traceback.format_exc()}[/red]")

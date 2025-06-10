@@ -138,6 +138,18 @@ class TestParseArguments:
 
         assert args.verbose is True
 
+    @patch("sys.argv", ["sly", "--list-fonts"])
+    @patch("sly.cli.get_config_path")
+    @patch("sly.cli.load_config_file")
+    def test_parse_arguments_list_fonts(self, mock_load_config, mock_get_config_path):
+        """Test parsing arguments with list-fonts flag."""
+        mock_get_config_path.return_value = "config.toml"
+        mock_load_config.return_value = {}
+
+        args = parse_arguments()
+
+        assert args.list_fonts is True
+
     @patch("sys.argv", ["sly"])
     @patch("sly.cli.get_config_path")
     @patch("sly.cli.load_config_file")
@@ -172,6 +184,7 @@ class TestMain:
         mock_args.path = "./images"
         mock_args.output = "test.mp4"
         mock_args.verbose = False
+        mock_args.list_fonts = False
 
         mock_parse.return_value = mock_args
         mock_validate.return_value = True
@@ -185,10 +198,23 @@ class TestMain:
         mock_creator.create_slideshow.assert_called_once()
 
     @patch("sly.cli.parse_arguments")
+    @patch("sly.cli.list_fonts")
+    def test_main_list_fonts(self, mock_list_fonts, mock_parse):
+        """Test main function with --list-fonts argument."""
+        mock_args = MagicMock()
+        mock_args.list_fonts = True
+        mock_parse.return_value = mock_args
+
+        main()
+
+        mock_list_fonts.assert_called_once()
+
+    @patch("sly.cli.parse_arguments")
     @patch("sly.cli.validate_arguments")
     def test_main_validation_failure(self, mock_validate, mock_parse):
         """Test main function when validation fails."""
         mock_args = MagicMock()
+        mock_args.list_fonts = False
         mock_parse.return_value = mock_args
         mock_validate.return_value = False
 
@@ -206,6 +232,7 @@ class TestMain:
         """Test main function handles KeyboardInterrupt gracefully."""
         mock_args = MagicMock()
         mock_args.verbose = False
+        mock_args.list_fonts = False
         mock_parse.return_value = mock_args
         mock_validate.return_value = True
 
@@ -226,6 +253,7 @@ class TestMain:
         """Test main function handles general exceptions gracefully."""
         mock_args = MagicMock()
         mock_args.verbose = False
+        mock_args.list_fonts = False
         mock_parse.return_value = mock_args
         mock_validate.return_value = True
 
